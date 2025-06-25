@@ -22,20 +22,28 @@ const Home = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `INICIO - ${config.storeName}` : 'INICIO - TIENDA'}</title>
+        <link rel="icon" href="../public/favicon.ico" />
         <meta name="description" content={config?.storeDescription || 'Tienda online'} />
       </Head>
 
-      <main className="w-full pt-16">
-        <div className="flex-col gap-10">
+      <main className="w-full">
+        <div className="flex flex-col">
+          
+          {/* Hero Section */}
           <Hero />
           
+          {/* Ofertas Section */}
           <Section title="Ofertas">
             {loadingOfertas ? (
-              <div className="text-center">Cargando ofertas...</div>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 text-sm">Cargando ofertas...</p>
+              </div>
             ) : (
               <>
-                <div className="w-full flex flex-wrap justify-center gap-12 sm:gap-2">
-                  {ofertas.map((articulo, index) => (
+                {/* Grid responsivo para products */}
+                <div className="w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-2 sm:px-4">
+                  {ofertas.slice(0, 10).map((articulo, index) => (
                     <CardProduct
                       key={index}
                       name={articulo.art_desc_vta}
@@ -46,28 +54,37 @@ const Home = ({ onAddToCart }) => {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => {
-                    scrollToTop();
-                    window.location.href = '/productos';
-                  }}
-                  className="bg-transparent text-blue-600 border border-blue-600 py-2 px-8 rounded-2xl hover:text-white hover:bg-blue-600 transition-all duration-300"
-                >
-                  Ver todos los productos
-                </button>
+                {/* Botón Ver Todos */}
+                <div className="w-full flex justify-center mt-6 sm:mt-8">
+                  <button
+                    onClick={() => {
+                      scrollToTop();
+                      window.location.href = '/productos';
+                    }}
+                    className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
+                  >
+                    Ver todos los productos
+                  </button>
+                </div>
               </>
             )}
           </Section>
 
+          {/* Hero Slider */}
           <HeroSlider />
 
+          {/* Productos Destacados Section */}
           <Section title="Productos destacados">
             {loadingDestacados ? (
-              <div className="text-center">Cargando destacados...</div>
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600 text-sm">Cargando destacados...</p>
+              </div>
             ) : (
               <>
-                <div className="w-full flex flex-wrap justify-center gap-12 sm:gap-2">
-                  {destacados.map((articulo, index) => (
+                {/* Grid responsivo para products */}
+                <div className="w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-2 sm:px-4">
+                  {destacados.slice(0, 10).map((articulo, index) => (
                     <CardProduct
                       key={index}
                       name={articulo.art_desc_vta}
@@ -78,15 +95,18 @@ const Home = ({ onAddToCart }) => {
                   ))}
                 </div>
 
-                <button
-                  onClick={() => {
-                    scrollToTop();
-                    window.location.href = '/productos';
-                  }}
-                  className="bg-transparent text-blue-600 border border-blue-600 py-2 px-8 rounded-2xl hover:text-white hover:bg-blue-600 transition-all duration-300"
-                >
-                  Ver más
-                </button>
+                {/* Botón Ver Más */}
+                <div className="w-full flex justify-center mt-6 sm:mt-8">
+                  <button
+                    onClick={() => {
+                      scrollToTop();
+                      window.location.href = '/productos';
+                    }}
+                    className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
+                  >
+                    Ver más
+                  </button>
+                </div>
               </>
             )}
           </Section>

@@ -1,17 +1,23 @@
 const Section = ({ children, title }) => {
   return (
-    <section className="py-12 px-12 w-full flex flex-col gap-15 justify-center items-center md:py-12 md:px-12 sm:py-8 sm:px-4">
+    <section className="w-full py-8 sm:py-12 md:py-16 px-4 sm:px-6 md:px-8 lg:px-12 flex flex-col items-center">
+      
+      {/* Título de la sección */}
       {title && (
-        <div className="relative text-center mb-8">
-          <h2 className="text-blue-600 text-4xl font-semibold leading-4 sm:text-2xl sm:leading-8">
+        <div className="relative text-center mb-6 sm:mb-8 md:mb-10 w-full">
+          <h2 className="text-blue-600 text-xl sm:text-2xl md:text-3xl lg:text-4xl font-semibold leading-tight px-4">
             {title}
           </h2>
-          <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-3/4 h-0.5 rounded-lg bg-blue-600"></div>
+          {/* Línea decorativa debajo del título */}
+          <div className="absolute -bottom-2 sm:-bottom-3 left-1/2 transform -translate-x-1/2 w-16 sm:w-20 md:w-24 h-0.5 sm:h-1 rounded-lg bg-blue-600"></div>
         </div>
       )}
-      <div className="w-full flex flex-col gap-8 justify-center items-center">
+      
+      {/* Contenido de la sección */}
+      <div className="w-full flex flex-col items-center max-w-7xl mx-auto">
         {children}
       </div>
+      
     </section>
   );
 };
