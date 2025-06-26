@@ -4,6 +4,7 @@ import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
 import apiClient from '../../config/api';
 import toast from 'react-hot-toast';
+import { formatPrice } from '../../hooks/useProducts'; // Importar la función de formateo
 
 const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   const [quantity, setQuantity] = useState(0);
@@ -11,6 +12,11 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const { dispatch } = useCart();
+
+  // Formatear los precios al recibir las props
+  const formattedPrice = formatPrice(price);
+  const formattedOriginalPrice = originalPrice ? formatPrice(originalPrice) : null;
+  const numericPrice = Math.round(parseFloat(price)); // Para cálculos
 
   useEffect(() => {
     const getProductImage = async () => {
@@ -30,8 +36,6 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
         
         if (response.data.success) {
           setFinalImageUrl(response.data.imageUrl);
-          
-          
         } else {
           throw new Error('Failed to get image from backend');
         }
@@ -65,7 +69,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
       type: 'ADD_ITEM',
       payload: {
         name,
-        price: Number(price),
+        price: numericPrice, // Usar precio numérico para el carrito
         imageUrl,
         quantity
       }
@@ -83,7 +87,8 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
     setQuantity(0);
   };
 
-  const total = price * quantity;
+  // Calcular total redondeado
+  const total = Math.round(numericPrice * quantity);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-2 sm:p-3 md:p-4 flex flex-col h-full group">
@@ -107,7 +112,6 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
           }`}
           onLoad={() => setImageLoading(false)}
           onError={(e) => {
-            
             const placeholderUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/images/placeholder.png`;
             if (e.target.src !== placeholderUrl) {
               e.target.src = placeholderUrl;
@@ -115,8 +119,6 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
             }
           }}
         />
-        
-        
       </div>
 
       {/* Información del producto */}
@@ -129,13 +131,13 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
 
         {/* Precios */}
         <div className="flex flex-col gap-0.5">
-          {originalPrice && (
+          {formattedOriginalPrice && (
             <span className="text-xs text-red-500 line-through">
-              ${originalPrice}
+              ${formattedOriginalPrice}
             </span>
           )}
           <span className="text-sm sm:text-base md:text-lg font-bold text-blue-600">
-            ${price}
+            ${formattedPrice}
           </span>
         </div>
 

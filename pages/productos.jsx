@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { Button } from '@heroui/button';
 import { IoMdSearch, IoMdClose, IoMdMenu, IoMdFunnel } from 'react-icons/io';
-import { useProducts } from '../hooks/useProducts';
 import { useConfig } from '../context/ConfigContext';
 import CardProduct from '../components/product/CardProduct';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
+import Pagination from '../components/common/Pagination';
 import apiClient from '../config/api';
 
 const Products = () => {
@@ -15,18 +15,32 @@ const Products = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   
+  // Estados de productos principales
+  const [allProducts, setAllProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
   // Estados de categorías
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [categoryProducts, setCategoryProducts] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [isLoadingCategoryProducts, setIsLoadingCategoryProducts] = useState(false);
+  
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalItems: 0,
+    itemsPerPage: 30,
+    hasNextPage: false,
+    hasPrevPage: false
+  });
   
   // Estados de UI móvil
   const [showCategoriesMenu, setShowCategoriesMenu] = useState(false);
-  const [isLoadingCategoryProducts, setIsLoadingCategoryProducts] = useState(false);
   
   const { config } = useConfig();
-  const { products: allProducts, loading } = useProducts('/store/productosMAIN');
 
   // Cargar categorías al montar el componente
   useEffect(() => {
@@ -44,6 +58,28 @@ const Products = () => {
     fetchCategories();
   }, []);
 
+  // Cargar productos principales al montar y cuando cambie la página
+  useEffect(() => {
+    if (!hasSearched && !selectedCategory) {
+      fetchMainProducts(currentPage);
+    }
+  }, [currentPage, hasSearched, selectedCategory]);
+
+  // Función para obtener productos principales
+  const fetchMainProducts = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get(`/store/productosMAIN?page=${page}&limit=30`);
+      setAllProducts(response.data.data || []);
+      setPagination(response.data.pagination || {});
+    } catch (error) {
+      console.error('Error fetching main products:', error);
+      setAllProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Determinar qué productos mostrar
   const displayProducts = () => {
     if (hasSearched) return searchResults;
@@ -51,21 +87,31 @@ const Products = () => {
     return allProducts;
   };
 
+  // Determinar qué información de paginación usar
+  const getCurrentPagination = () => {
+    // Para búsquedas y categorías, usar su propia paginación
+    // Para productos principales, usar el estado de paginación principal
+    return pagination;
+  };
+
   // Función de búsqueda
-  const handleSearch = async (e) => {
-    e.preventDefault();
+  const handleSearch = async (e, page = 1) => {
+    if (e) e.preventDefault();
     if (!searchTerm.trim()) return;
 
     setIsSearching(true);
     setHasSearched(true);
-    setSelectedCategory(null); // Limpiar categoría seleccionada
+    setSelectedCategory(null);
+    setCurrentPage(page);
 
     try {
-      const response = await apiClient.get(`/store/buscar?q=${encodeURIComponent(searchTerm)}`);
-      setSearchResults(response.data);
+      const response = await apiClient.get(`/store/buscar?q=${encodeURIComponent(searchTerm)}&page=${page}&limit=30`);
+      setSearchResults(response.data.data || []);
+      setPagination(response.data.pagination || {});
     } catch (error) {
       console.error('Error searching products:', error);
       setSearchResults([]);
+      setPagination({});
     } finally {
       setIsSearching(false);
     }
@@ -78,21 +124,26 @@ const Products = () => {
     setHasSearched(false);
     setSelectedCategory(null);
     setCategoryProducts([]);
+    setCurrentPage(1);
+    fetchMainProducts(1); // Recargar productos principales
   };
 
   // Función para seleccionar categoría
-  const handleSelectCategory = async (categoryName) => {
+  const handleSelectCategory = async (categoryName, page = 1) => {
     setIsLoadingCategoryProducts(true);
     setSelectedCategory(categoryName);
-    setHasSearched(false); // Limpiar búsqueda
-    setShowCategoriesMenu(false); // Cerrar menú móvil
+    setHasSearched(false);
+    setShowCategoriesMenu(false);
+    setCurrentPage(page);
 
     try {
-      const response = await apiClient.get(`/store/articulos/${encodeURIComponent(categoryName)}`);
-      setCategoryProducts(response.data);
+      const response = await apiClient.get(`/store/articulos/${encodeURIComponent(categoryName)}?page=${page}&limit=30`);
+      setCategoryProducts(response.data.data || []);
+      setPagination(response.data.pagination || {});
     } catch (error) {
       console.error('Error fetching category products:', error);
       setCategoryProducts([]);
+      setPagination({});
     } finally {
       setIsLoadingCategoryProducts(false);
     }
@@ -105,9 +156,25 @@ const Products = () => {
     setHasSearched(false);
     setSearchResults([]);
     setShowCategoriesMenu(false);
+    setCurrentPage(1);
+    fetchMainProducts(1);
+  };
+
+  // Manejar cambio de página
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    
+    if (hasSearched) {
+      handleSearch(null, page);
+    } else if (selectedCategory) {
+      handleSelectCategory(selectedCategory, page);
+    } else {
+      fetchMainProducts(page);
+    }
   };
 
   const currentProducts = displayProducts();
+  const currentPagination = getCurrentPagination();
   const isLoading = loading || isSearching || isLoadingCategoryProducts;
 
   return (
@@ -149,7 +216,7 @@ const Products = () => {
                   {categories.map((category) => (
                     <button
                       key={category.NOM_CLASIF}
-                      onClick={() => handleSelectCategory(category.NOM_CLASIF)}
+                      onClick={() => handleSelectCategory(category.NOM_CLASIF, 1)}
                       className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                         selectedCategory === category.NOM_CLASIF
                           ? 'bg-blue-600 text-white'
@@ -281,16 +348,29 @@ const Products = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
-                  {currentProducts.map((producto, index) => (
-                    <CardProduct
-                      key={`${producto.CODIGO_BARRA}-${index}`}
-                      name={producto.art_desc_vta}
-                      price={producto.PRECIO}
-                      imageUrl={producto.CODIGO_BARRA}
-                    />
-                  ))}
-                </div>
+                <>
+                  {/* Grid de productos */}
+                  <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+                    {currentProducts.map((producto, index) => (
+                      <CardProduct
+                        key={`${producto.CODIGO_BARRA}-${index}`}
+                        name={producto.art_desc_vta}
+                        price={producto.PRECIO}
+                        imageUrl={producto.CODIGO_BARRA}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Componente de Paginación */}
+                  <Pagination
+                    currentPage={currentPagination.currentPage || 1}
+                    totalPages={currentPagination.totalPages || 1}
+                    totalItems={currentPagination.totalItems || 0}
+                    itemsPerPage={currentPagination.itemsPerPage || 30}
+                    onPageChange={handlePageChange}
+                    loading={isLoading}
+                  />
+                </>
               )}
             </div>
           </main>
@@ -341,7 +421,7 @@ const Products = () => {
                     {categories.map((category) => (
                       <button
                         key={category.NOM_CLASIF}
-                        onClick={() => handleSelectCategory(category.NOM_CLASIF)}
+                        onClick={() => handleSelectCategory(category.NOM_CLASIF, 1)}
                         className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                           selectedCategory === category.NOM_CLASIF
                             ? 'bg-blue-600 text-white'

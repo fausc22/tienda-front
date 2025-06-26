@@ -6,7 +6,7 @@ import { VscError } from 'react-icons/vsc';
 import { IoMdAdd, IoMdRemove, IoMdTrash } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
-import { useProducts } from '../hooks/useProducts';
+import { useProducts, useRelatedProducts } from '../hooks/useProducts';
 import CardProduct from '../components/product/CardProduct';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
 import Section from '../components/common/Section';
@@ -226,10 +226,15 @@ function CardsMovil({
 const Checkout = ({ onAddToCart }) => {
   const { items, totalPrice, dispatch } = useCart();
   const { config } = useConfig();
-  const { products: relatedProducts } = useProducts('/store/articulosDEST');
+  const { products: relatedProducts, loading: loadingRelated, error: errorRelated } = useRelatedProducts(items);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-
+ // Debug mejorado
+  useEffect(() => {
+    console.log('🛒 Items del carrito enviados al backend:', items);
+    console.log('🔗 Productos relacionados recibidos:', relatedProducts);
+    console.log('📊 Cantidad:', relatedProducts?.length || 0);
+  }, [items, relatedProducts]);
   const handleQuantityChange = (id, newQuantity) => {
     if (newQuantity <= 0) {
       setItemToDelete(id);
