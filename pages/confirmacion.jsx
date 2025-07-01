@@ -79,7 +79,7 @@ const Confirmation = () => {
     } else if (!config) {
       setLoading(true);
     }
-  }, [config]);
+  }, [config, processed, dispatch]);
 
   // Función para enviar email en background SIN feedback visual
   const enviarEmailEnBackground = async (pedido) => {

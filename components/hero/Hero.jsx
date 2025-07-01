@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { useConfig } from '../../context/ConfigContext';
+import Image from 'next/image';
 
 const Hero = () => {
   const { config } = useConfig();
@@ -8,18 +9,18 @@ const Hero = () => {
     <section className="relative w-full h-screen min-h-[400px] max-h-[600px] overflow-hidden">
       
       {/* Imagen de fondo usando img tag - MÁS CONFIABLE */}
-      <img
+      <Image
         src="/images/hero-image.png"
         alt="Hero background"
-        className="absolute top-0 left-0 w-full h-full object-cover"
-        style={{
-          zIndex: 1,
-        }}
+        fill
+        className="object-cover"
+        style={{ zIndex: 1 }}
         onError={(e) => {
-          // Fallback si la imagen local no carga
           e.target.src = 'https://images.unsplash.com/photo-1556741533-6e6a62bd8b49?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80';
         }}
+        priority
       />
+
       
       {/* Overlay oscuro para mejorar legibilidad */}
       <div 
