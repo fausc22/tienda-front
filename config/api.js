@@ -4,22 +4,31 @@ import axios from 'axios';
 const getBaseURL = () => {
   // Si estamos en el browser
   if (typeof window !== 'undefined') {
-    // Si hay una variable de entorno específica, usarla
+    // Prioridad 1: Variable de entorno específica
     if (process.env.NEXT_PUBLIC_API_URL) {
       return process.env.NEXT_PUBLIC_API_URL;
     }
     
-    // Si estamos en localhost, usar localhost:3001
+    // Prioridad 2: Detectar entorno por hostname
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       return 'http://localhost:3001';
     }
     
-    // Si estamos en producción, usar la IP del servidor
+    // Prioridad 3: Producción (default)
     return 'http://45.58.127.47:3001';
   }
   
-  // Para SSR, usar la variable de entorno o fallback
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  // Para SSR/SSG, usar variables de entorno
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  
+  // Fallback basado en NODE_ENV
+  if (process.env.NODE_ENV === 'production') {
+    return 'http://45.58.127.47:3001';
+  }
+  
+  return 'http://localhost:3001';
 };
 
 // Cliente principal con timeout estándar
@@ -135,5 +144,14 @@ export const checkApiConnection = async () => {
     };
   }
 };
+
+// Log de configuración en desarrollo
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_DEBUG === 'true') {
+  console.log('🔧 API Configuration:', {
+    baseURL: getBaseURL(),
+    environment: process.env.NODE_ENV,
+    buildEnv: process.env.NEXT_PUBLIC_BUILD_ENV
+  });
+}
 
 export default apiClient;

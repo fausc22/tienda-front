@@ -7,9 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next export",
+    "clean": "rimraf .next out",
+    "clean:win": "if exist .next rmdir /s /q .next && if exist out rmdir /s /q out",
+    "build:static": "cross-env NODE_ENV=production next build",
+    "build:prod": "npm run clean && cross-env NODE_ENV=production next build",
+    "build:win": "npm run clean:win && cross-env NODE_ENV=production next build",
     "serve": "npx serve out",
-    "clean": "rm -rf .next out"
+    "analyze": "cross-env ANALYZE=true next build",
+    "check-build": "dir .next && dir out",
+    "check-build:win": "if exist .next (dir .next) && if exist out (dir out)"
   },
   "dependencies": {
     "@heroui/button": "^2.2.19",
@@ -34,9 +40,11 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.0",
+    "cross-env": "^7.0.3",
     "eslint": "8.4.1",
     "eslint-config-next": "^13.0.5",
     "postcss": "^8.4.5",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^3.0.5"
   },
   "engines": {

@@ -2,13 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  
   // Configuración para export estático 
   output: 'export',
   trailingSlash: true,
   
-  
-  // Configuración de imágenes para export
+  // Deshabilitar optimización de imágenes para export estático
   images: {
     unoptimized: true,
     remotePatterns: [
@@ -47,4 +45,22 @@ const nextConfig = {
     ],
   },
 
+  // Configuración para assets estáticos
+  assetPrefix: '',
+  
+  // Configuración para rutas
+  basePath: '',
+  
+  // Deshabilitar funciones que no son compatibles con export estático
+  poweredByHeader: false,
+  
+  // Configuración específica para export
+  distDir: '.next',
+  
+  // Asegurar compatibilidad con hosting estático
+  experimental: {
+    // Deshabilitar características que requieren servidor
+  }
 }
+
+module.exports = nextConfig
