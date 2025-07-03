@@ -7,7 +7,7 @@ import { IoMailOutline, IoCheckmarkCircle } from 'react-icons/io5';
 import { FaLocationDot } from 'react-icons/fa6';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
-import apiClient, { emailApiClient, longApiClient } from '../config/api';
+import { emailApiClient, longApiClient } from '../config/api';
 
 const Confirmation = () => {
   const [pedido, setPedido] = useState(null);
@@ -40,12 +40,17 @@ const Confirmation = () => {
           hasProcessed.current = true;
           setProcessed(true);
           
-          console.log('Iniciando procesamiento del pedido...');
+          if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+            console.log('🛒 Confirmation: Iniciando procesamiento del pedido...', pedidoData);
+          }
           
           // PASO 1: Insertar pedido (CRÍTICO - debe funcionar)
           try {
             await insertarPedidoBaseDatos(pedidoData);
-            console.log('✅ Pedido insertado exitosamente');
+            
+            if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+              console.log('✅ Confirmation: Pedido insertado exitosamente');
+            }
             
             // Limpiar localStorage inmediatamente después del éxito del pedido
             localStorage.removeItem('pedido');
@@ -56,17 +61,15 @@ const Confirmation = () => {
             setLoading(false);
             
           } catch (pedidoError) {
-            console.error('❌ Error crítico al insertar pedido:', pedidoError);
+            console.error('❌ Confirmation: Error crítico al insertar pedido:', pedidoError);
             throw new Error('Error al procesar el pedido: ' + pedidoError.message);
           }
           
           // PASO 2: Enviar email completamente en background (sin verificación)
           enviarEmailEnBackground(pedidoData);
-          
-          console.log('Pedido procesado exitosamente');
         }
       } catch (error) {
-        console.error('Error procesando el pedido:', error);
+        console.error('❌ Confirmation: Error procesando el pedido:', error);
         setError('Error procesando el pedido: ' + error.message);
         hasProcessed.current = false;
         setProcessed(false);
@@ -104,10 +107,14 @@ const Confirmation = () => {
           storePhone: config.storePhone
         });
         
-        console.log('✅ Correo enviado exitosamente en background');
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('✅ Confirmation: Email enviado exitosamente en background');
+        }
         
       } catch (error) {
-        console.log('📧 Email enviado en background (timeout normal):', error.message);
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('📧 Confirmation: Email enviado en background (timeout normal):', error.message);
+        }
         // No hacer nada más - el email se está enviando pero puede tomar tiempo
       }
     }, 100); // Pequeño delay para asegurar que la UI se muestre primero
@@ -128,7 +135,9 @@ const Confirmation = () => {
       productos: pedido.productos
     });
     
-    console.log('Pedido insertado correctamente en la base de datos:', response.data);
+    if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+      console.log('✅ Confirmation: Pedido insertado correctamente en la base de datos:', response.data);
+    }
   };
 
   if (loading) {

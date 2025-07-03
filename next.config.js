@@ -2,18 +2,31 @@
 const nextConfig = {
   reactStrictMode: true,
   
-  // Configuración para hosting estático
+  
+  // Configuración para export estático 
   output: 'export',
   trailingSlash: true,
+  
   
   // Configuración de imágenes para export
   images: {
     unoptimized: true,
     remotePatterns: [
       {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3001',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '45.58.127.47',
+        port: '3001',
+        pathname: '/**',
+      },
+      {
         protocol: 'https',
         hostname: 'www.rsoftware.com.ar',
-        port: '8090',
         pathname: '/**',
       },
       {
@@ -34,30 +47,4 @@ const nextConfig = {
     ],
   },
 
-  // Configuración del assetPrefix para el preview
-  assetPrefix: process.env.NODE_ENV === 'production' 
-    ? 'https://www.rsoftware.com.ar:8090/preview/tienda.rsoftware.com.ar'
-    : '',
-
-  // Configuración de paths públicos
-  basePath: process.env.NODE_ENV === 'production' 
-    ? '/preview/tienda.rsoftware.com.ar'
-    : '',
-
-  // Optimizaciones
-  poweredByHeader: false,
-  
-  // Variables de entorno que estarán disponibles en el cliente
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-  },
-
-  // Configuración de webpack si necesitas alguna customización
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Aquí puedes agregar configuraciones personalizadas de webpack
-    return config;
-  },
 }
-
-module.exports = nextConfig;

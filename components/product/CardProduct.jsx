@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
-import apiClient from '../../config/api';
+import apiClient, { getApiBaseURL } from '../../config/api';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts'; // Importar la función de formateo
 
 const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   const [quantity, setQuantity] = useState(0);
-  const [finalImageUrl, setFinalImageUrl] = useState(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/images/placeholder.png`);
+  const [finalImageUrl, setFinalImageUrl] = useState(`${getApiBaseURL()}/images/placeholder.png`);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const { dispatch } = useCart();
@@ -21,7 +21,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   useEffect(() => {
     const getProductImage = async () => {
       if (!imageUrl) {
-        const placeholderUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/images/placeholder.png`;
+        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
         setFinalImageUrl(placeholderUrl);
         setImageLoading(false);
         return;
@@ -31,19 +31,27 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
       setImageError(false);
 
       try {
-        // 🆕 LLAMADA ÚNICA AL BACKEND que maneja los 3 casos
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('🖼️ CardProduct: Obteniendo imagen para', imageUrl);
+        }
+
+        // Llamada ÚNICA AL BACKEND que maneja los 3 casos (externa, interna, placeholder)
         const response = await apiClient.get(`/store/image/${imageUrl}`);
         
         if (response.data.success) {
           setFinalImageUrl(response.data.imageUrl);
+          
+          if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+            console.log('✅ CardProduct: Imagen obtenida:', response.data.source, response.data.imageUrl);
+          }
         } else {
           throw new Error('Failed to get image from backend');
         }
         
       } catch (error) {
-        console.error('Error getting product image:', error);
+        console.error('❌ CardProduct: Error getting product image:', error);
         // Construir URL de placeholder usando la base URL de la API
-        const placeholderUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/images/placeholder.png`;
+        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
         setFinalImageUrl(placeholderUrl);
         setImageError(true);
       } finally {
@@ -112,13 +120,20 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
           }`}
           onLoad={() => setImageLoading(false)}
           onError={(e) => {
-            const placeholderUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/images/placeholder.png`;
+            const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
             if (e.target.src !== placeholderUrl) {
               e.target.src = placeholderUrl;
               setImageError(true);
             }
           }}
         />
+        
+        {/* Indicador de error de imagen en modo debug */}
+        {imageError && process.env.NEXT_PUBLIC_DEBUG === 'true' && (
+          <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
+            ⚠️
+          </div>
+        )}
       </div>
 
       {/* Información del producto */}

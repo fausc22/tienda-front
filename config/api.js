@@ -1,9 +1,31 @@
 import axios from 'axios';
 
+// Configuración de base URL dinámica
+const getBaseURL = () => {
+  // Si estamos en el browser
+  if (typeof window !== 'undefined') {
+    // Si hay una variable de entorno específica, usarla
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      return process.env.NEXT_PUBLIC_API_URL;
+    }
+    
+    // Si estamos en localhost, usar localhost:3001
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    
+    // Si estamos en producción, usar la IP del servidor
+    return 'http://45.58.127.47:3001';
+  }
+  
+  // Para SSR, usar la variable de entorno o fallback
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+};
+
 // Cliente principal con timeout estándar
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 10000, // 10 segundos para operaciones normales
+  baseURL: getBaseURL(),
+  timeout: 15000, // 15 segundos para operaciones normales
   headers: {
     'Content-Type': 'application/json',
   },
@@ -11,8 +33,8 @@ const apiClient = axios.create({
 
 // Cliente específico para emails con timeout extendido
 export const emailApiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 30000, // 30 segundos para emails
+  baseURL: getBaseURL(),
+  timeout: 45000, // 45 segundos para emails
   headers: {
     'Content-Type': 'application/json',
   },
@@ -20,28 +42,98 @@ export const emailApiClient = axios.create({
 
 // Cliente específico para operaciones largas (pedidos, uploads, etc.)
 export const longApiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  timeout: 25000, // 25 segundos para operaciones complejas
+  baseURL: getBaseURL(),
+  timeout: 35000, // 35 segundos para operaciones complejas
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Interceptores para manejo de errores global
-const setupInterceptors = (client) => {
-  client.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
-        console.warn('Timeout detectado pero operación puede haber sido exitosa:', error.config.url);
+// Interceptores para manejo de errores global y debugging
+const setupInterceptors = (client, name = 'API') => {
+  // Request interceptor
+  client.interceptors.request.use(
+    (config) => {
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log(`🚀 [${name}] ${config.method?.toUpperCase()} ${config.url}`, {
+          baseURL: config.baseURL,
+          data: config.data,
+          params: config.params
+        });
       }
+      return config;
+    },
+    (error) => {
+      console.error(`❌ [${name}] Request Error:`, error);
+      return Promise.reject(error);
+    }
+  );
+
+  // Response interceptor
+  client.interceptors.response.use(
+    (response) => {
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log(`✅ [${name}] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+          status: response.status,
+          data: response.data
+        });
+      }
+      return response;
+    },
+    (error) => {
+      // Log del error
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.error(`❌ [${name}] Response Error:`, {
+          url: error.config?.url,
+          status: error.response?.status,
+          message: error.message,
+          data: error.response?.data
+        });
+      }
+
+      // Manejo especial de timeouts
+      if (error.code === 'ECONNABORTED' && error.message.includes('timeout')) {
+        console.warn(`⏰ [${name}] Timeout detectado pero operación puede haber sido exitosa:`, error.config?.url);
+        
+        // Para operaciones críticas como pedidos, consideramos que el timeout no es necesariamente un error
+        if (error.config?.url?.includes('NuevoPedido') || error.config?.url?.includes('mailPedidoRealizado')) {
+          console.warn('⚠️ Timeout en operación crítica - la operación puede haberse completado en el servidor');
+        }
+      }
+
+      // Manejo de errores de red
+      if (error.message === 'Network Error') {
+        console.error(`🌐 [${name}] Error de red - verificar conexión al servidor:`, getBaseURL());
+      }
+
       return Promise.reject(error);
     }
   );
 };
 
-setupInterceptors(apiClient);
-setupInterceptors(emailApiClient);
-setupInterceptors(longApiClient);
+setupInterceptors(apiClient, 'API');
+setupInterceptors(emailApiClient, 'EMAIL');
+setupInterceptors(longApiClient, 'LONG');
+
+// Función helper para obtener la URL base
+export const getApiBaseURL = getBaseURL;
+
+// Función helper para verificar la conexión
+export const checkApiConnection = async () => {
+  try {
+    const response = await apiClient.get('/health', { timeout: 5000 });
+    return {
+      success: true,
+      status: response.status,
+      data: response.data
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      baseURL: getBaseURL()
+    };
+  }
+};
 
 export default apiClient;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import apiClient from '../../config/api';
+import apiClient, { getApiBaseURL } from '../../config/api';
 
 const HeroSlider = () => {
   const [images, setImages] = useState([]);
@@ -9,13 +9,22 @@ const HeroSlider = () => {
   useEffect(() => {
     const fetchImages = async () => {
       try {
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('🖼️ HeroSlider: Obteniendo imágenes de publicidad...');
+        }
+
         const response = await apiClient.get('/store/getImagenesPublicidad');
-        const imageUrls = response.data.map(url => 
-          `${process.env.NEXT_PUBLIC_API_URL}${url}`
-        );
+        
+        // Construir URLs completas usando la API base URL
+        const imageUrls = response.data.map(url => `${getApiBaseURL()}${url}`);
         setImages(imageUrls);
+
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('✅ HeroSlider: Imágenes cargadas:', imageUrls.length);
+        }
       } catch (error) {
-        console.error('Error al obtener imágenes de publicidad:', error);
+        console.error('❌ HeroSlider: Error al obtener imágenes de publicidad:', error);
+        
         // Fallback con imágenes de ejemplo
         const fallbackImages = [
           'https://picsum.photos/800/400?random=1',
@@ -23,6 +32,10 @@ const HeroSlider = () => {
           'https://picsum.photos/800/400?random=3'
         ];
         setImages(fallbackImages);
+
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('⚠️ HeroSlider: Usando imágenes de fallback');
+        }
       } finally {
         setLoading(false);
       }
@@ -53,7 +66,10 @@ const HeroSlider = () => {
       <section className="py-8 sm:py-12 md:py-16 px-4 sm:px-6 md:px-8">
         <div className="max-w-6xl mx-auto">
           <div className="bg-gray-200 h-48 sm:h-64 md:h-80 lg:h-96 rounded-lg animate-pulse flex items-center justify-center">
-            <p className="text-gray-500 text-sm sm:text-base">Cargando publicidades...</p>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-500 text-sm sm:text-base">Cargando publicidades...</p>
+            </div>
           </div>
         </div>
       </section>
@@ -84,7 +100,7 @@ const HeroSlider = () => {
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     e.target.style.display = 'none';
-                    console.error('Error loading image:', e.target.src);
+                    console.error('❌ HeroSlider: Error loading image:', e.target.src);
                   }}
                 />
               </div>

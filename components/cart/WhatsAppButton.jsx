@@ -1,17 +1,23 @@
 import { useConfig } from '../../context/ConfigContext';
 
 const WhatsAppButton = () => {
-  const { config } = useConfig();
+  const { config, loading } = useConfig();
 
   const handleWhatsAppClick = () => {
     if (config?.storePhone) {
       const phoneNumber = config.storePhone.replace(/\D/g, ''); // Remove non-digits
       const whatsappUrl = `https://wa.me/${phoneNumber}`;
+      
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log('📱 WhatsApp: Abriendo chat con:', phoneNumber);
+      }
+      
       window.open(whatsappUrl, '_blank');
     }
   };
 
-  if (!config?.storePhone) return null;
+  // No mostrar si está cargando o no hay teléfono configurado
+  if (loading || !config?.storePhone) return null;
 
   return (
     <button

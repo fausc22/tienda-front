@@ -6,7 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "export": "next export",
+    "serve": "npx serve out",
+    "clean": "rm -rf .next out"
   },
   "dependencies": {
     "@heroui/button": "^2.2.19",
@@ -35,5 +38,9 @@
     "eslint-config-next": "^13.0.5",
     "postcss": "^8.4.5",
     "tailwindcss": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=18.x",
+    "npm": ">=8.x"
   }
 }

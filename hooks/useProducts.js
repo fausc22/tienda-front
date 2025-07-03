@@ -36,42 +36,46 @@ export const useProducts = (endpoint, options = {}) => {
     dependencies = []
   } = options;
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Construir URL con parámetros de paginación si está habilitada
-        let url = endpoint;
-        if (enablePagination) {
-          const separator = endpoint.includes('?') ? '&' : '?';
-          url = `${endpoint}${separator}page=${page}&limit=${limit}`;
-        }
-        
-        const response = await apiClient.get(url);
-        
-        if (enablePagination && response.data.data) {
-          // Respuesta paginada - aplicar formateo de precios
-          const formattedProducts = processProductPrices(response.data.data);
-          setProducts(formattedProducts);
-          setPagination(response.data.pagination);
-        } else {
-          // Respuesta simple (para ofertas, destacados, etc.) - aplicar formateo de precios
-          const formattedProducts = processProductPrices(response.data);
-          setProducts(formattedProducts);
-          setPagination(null);
-        }
-      } catch (err) {
-        console.error(`Error fetching products from ${endpoint}:`, err);
-        setError(err.message);
-        setProducts([]);
-        setPagination(null);
-      } finally {
-        setLoading(false);
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Construir URL con parámetros de paginación si está habilitada
+      let url = endpoint;
+      if (enablePagination) {
+        const separator = endpoint.includes('?') ? '&' : '?';
+        url = `${endpoint}${separator}page=${page}&limit=${limit}`;
       }
-    };
+      
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log('🔍 useProducts fetching:', url);
+      }
+      
+      const response = await apiClient.get(url);
+      
+      if (enablePagination && response.data.data) {
+        // Respuesta paginada - aplicar formateo de precios
+        const formattedProducts = processProductPrices(response.data.data);
+        setProducts(formattedProducts);
+        setPagination(response.data.pagination);
+      } else {
+        // Respuesta simple (para ofertas, destacados, etc.) - aplicar formateo de precios
+        const formattedProducts = processProductPrices(response.data);
+        setProducts(formattedProducts);
+        setPagination(null);
+      }
+    } catch (err) {
+      console.error(`Error fetching products from ${endpoint}:`, err);
+      setError(err.message);
+      setProducts([]);
+      setPagination(null);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchProducts();
   }, [endpoint, page, limit, enablePagination, ...dependencies]);
 
@@ -117,9 +121,13 @@ export const useProductSearch = (searchTerm, page = 1, limit = 30) => {
     setError(null);
 
     try {
-      const response = await apiClient.get(
-        `/store/buscar?q=${encodeURIComponent(term)}&page=${searchPage}&limit=${limit}`
-      );
+      const url = `/store/buscar?q=${encodeURIComponent(term)}&page=${searchPage}&limit=${limit}`;
+      
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log('🔍 useProductSearch:', url);
+      }
+      
+      const response = await apiClient.get(url);
       
       // Aplicar formateo de precios a los resultados de búsqueda
       const formattedProducts = processProductPrices(response.data.data || []);
@@ -162,9 +170,13 @@ export const useCategoryProducts = (categoryName, page = 1, limit = 30) => {
     setError(null);
 
     try {
-      const response = await apiClient.get(
-        `/store/articulos/${encodeURIComponent(category)}?page=${categoryPage}&limit=${limit}`
-      );
+      const url = `/store/articulos/${encodeURIComponent(category)}?page=${categoryPage}&limit=${limit}`;
+      
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+        console.log('🔍 useCategoryProducts:', url);
+      }
+      
+      const response = await apiClient.get(url);
       
       // Aplicar formateo de precios a los productos de categoría
       const formattedProducts = processProductPrices(response.data.data || []);
@@ -189,14 +201,7 @@ export const useCategoryProducts = (categoryName, page = 1, limit = 30) => {
   };
 };
 
-// UTILIDAD ADICIONAL: Hook para formatear precios individuales
-export const useFormattedPrice = (price) => {
-  return formatPrice(price);
-};
-
-// UTILIDAD ADICIONAL: Función que puedes importar y usar en componentes
-export { formatPrice };
-
+// Hook para productos relacionados en checkout
 export const useRelatedProducts = (cartItems = []) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -213,7 +218,9 @@ export const useRelatedProducts = (cartItems = []) => {
           .map(item => item.imageUrl || item.codigo_barra)
           .filter(Boolean);
         
-        console.log('📤 Enviando códigos al backend:', cartCodes);
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('📤 useRelatedProducts - códigos enviados:', cartCodes);
+        }
         
         // Construir URL con query parameters
         let url = '/store/articulosCheckout';
@@ -221,15 +228,15 @@ export const useRelatedProducts = (cartItems = []) => {
           url += `?cartCodes=${cartCodes.join(',')}`;
         }
         
-        console.log('🌐 URL final:', url);
-        
         const response = await apiClient.get(url);
         
         // Procesar y formatear precios
         const formattedProducts = processProductPrices(response.data);
         setProducts(formattedProducts);
         
-        console.log('📦 Productos recibidos y formateados:', formattedProducts.length);
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('📦 useRelatedProducts - productos recibidos:', formattedProducts.length);
+        }
       } catch (err) {
         console.error('❌ Error fetching related products:', err);
         setError(err.message);
@@ -244,3 +251,11 @@ export const useRelatedProducts = (cartItems = []) => {
 
   return { products, loading, error };
 };
+
+// UTILIDAD ADICIONAL: Hook para formatear precios individuales
+export const useFormattedPrice = (price) => {
+  return formatPrice(price);
+};
+
+// UTILIDAD ADICIONAL: Función que puedes importar y usar en componentes
+export { formatPrice };
