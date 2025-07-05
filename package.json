@@ -5,17 +5,15 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:prod": "cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
+    "build:analyze": "cross-env ANALYZE=true NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "rimraf .next out",
     "clean:win": "if exist .next rmdir /s /q .next && if exist out rmdir /s /q out",
-    "build:static": "cross-env NODE_ENV=production next build",
-    "build:prod": "npm run clean && cross-env NODE_ENV=production next build",
-    "build:win": "npm run clean:win && cross-env NODE_ENV=production next build",
-    "serve": "npx serve out",
-    "analyze": "cross-env ANALYZE=true next build",
-    "check-build": "dir .next && dir out",
-    "check-build:win": "if exist .next (dir .next) && if exist out (dir out)"
+    "serve": "npx serve out -p 3000",
+    "check-build": "ls -la out/",
+    "check-build:win": "if exist out (dir out)"
   },
   "dependencies": {
     "@heroui/button": "^2.2.19",

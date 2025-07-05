@@ -9,26 +9,23 @@ const getBaseURL = () => {
       return process.env.NEXT_PUBLIC_API_URL;
     }
     
-    // Prioridad 2: Detectar entorno por hostname
+    // Prioridad 2: Detectar entorno por hostname para desarrollo
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'http://localhost:3001';
+      // En desarrollo local, usar localhost solo si el servidor está corriendo ahí
+      return 'http://45.58.127.47:3001';
     }
     
-    // Prioridad 3: Producción (default)
+    // Prioridad 3: Para cualquier otro caso (incluyendo build), usar servidor remoto
     return 'http://45.58.127.47:3001';
   }
   
-  // Para SSR/SSG, usar variables de entorno
+  // Para SSR/SSG
   if (process.env.NEXT_PUBLIC_API_URL) {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  // Fallback basado en NODE_ENV
-  if (process.env.NODE_ENV === 'production') {
-    return 'http://45.58.127.47:3001';
-  }
-  
-  return 'http://localhost:3001';
+  // Fallback para producción
+  return 'http://45.58.127.47:3001';
 };
 
 // Cliente principal con timeout estándar
@@ -111,7 +108,7 @@ const setupInterceptors = (client, name = 'API') => {
       }
 
       // Manejo de errores de red
-      if (error.message === 'Network Error') {
+      if (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
         console.error(`🌐 [${name}] Error de red - verificar conexión al servidor:`, getBaseURL());
       }
 

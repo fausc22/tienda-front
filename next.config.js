@@ -2,6 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   
+  // CONFIGURACIÓN CRUCIAL PARA SUBDIRECTORIO
+  basePath: '/tienda',
+  assetPrefix: '/tienda',
+  
   // Configuración para export estático 
   output: 'export',
   trailingSlash: true,
@@ -10,12 +14,6 @@ const nextConfig = {
   images: {
     unoptimized: true,
     remotePatterns: [
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '3001',
-        pathname: '/**',
-      },
       {
         protocol: 'http',
         hostname: '45.58.127.47',
@@ -45,22 +43,29 @@ const nextConfig = {
     ],
   },
 
-  // Configuración para assets estáticos
-  assetPrefix: '',
-  
-  // Configuración para rutas
-  basePath: '',
-  
-  // Deshabilitar funciones que no son compatibles con export estático
-  poweredByHeader: false,
-  
   // Configuración específica para export
   distDir: '.next',
   
   // Asegurar compatibilidad con hosting estático
-  experimental: {
-    // Deshabilitar características que requieren servidor
-  }
+  poweredByHeader: false,
+  
+  // Optimizaciones para producción
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error']
+    } : false,
+  },
+
+  // Configuración para webpack
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+      };
+    }
+    return config;
+  },
 }
 
 module.exports = nextConfig

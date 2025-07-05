@@ -8,10 +8,13 @@ import Hero from '../components/hero/Hero';
 import HeroSlider from '../components/hero/HeroSlider';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
 import Section from '../components/common/Section';
+import { useOfertas } from '../hooks/useOfertas';
+import CardProductOferta from '../components/product/CardProductOferta';
+
 
 const Home = ({ onAddToCart }) => {
   const { config } = useConfig();
-  const { products: ofertas, loading: loadingOfertas } = useProducts('/store/articulosOF');
+  const { ofertas, loading, error } = useOfertas();
   const { products: destacados, loading: loadingDestacados } = useProducts('/store/articulosDEST');
 
   const scrollToTop = () => {
@@ -38,17 +41,19 @@ const Home = ({ onAddToCart }) => {
           <Hero />
           
           {/* Ofertas Section - Solo si hay productos en ofertas */}
-          {shouldShowSection(ofertas, loadingOfertas) && (
+          {shouldShowSection(ofertas, loading) && (
             <Section title="Ofertas">
               {/* Grid responsivo para productos */}
               <div className="w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-2 sm:px-4">
                 {ofertas.slice(0, 10).map((articulo, index) => (
-                  <CardProduct
+                  <CardProductOferta
                     key={index}
-                    name={articulo.art_desc_vta}
-                    price={articulo.PRECIO}
-                    imageUrl={articulo.CODIGO_BARRA}
-                    onAddToCart={(item) => onAddToCart && onAddToCart(item.quantity)}
+                    name={articulo.name}
+                    originalPrice={articulo.originalPrice}
+                    offerPrice={articulo.offerPrice}
+                    imageUrl={articulo.imageUrl}
+                    codigoBarra={articulo.codigoBarra}
+                    stock={articulo.stock}
                   />
                 ))}
               </div>
@@ -58,7 +63,7 @@ const Home = ({ onAddToCart }) => {
                 <button
                   onClick={() => {
                     scrollToTop();
-                    window.location.href = '/productos';
+                    window.location.href = '/tienda/productos';
                   }}
                   className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
                 >
@@ -69,10 +74,10 @@ const Home = ({ onAddToCart }) => {
           )}
 
           {/* Loading de ofertas - Solo si está cargando y necesitamos mostrar algo */}
-          {loadingOfertas && (
+          {loading && (
             <Section title="Ofertas">
               <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-4"></div>
                 <p className="text-gray-600 text-sm">Cargando ofertas...</p>
               </div>
             </Section>
@@ -123,7 +128,7 @@ const Home = ({ onAddToCart }) => {
           )}
 
           {/* Si no hay ninguna sección de productos, mostrar mensaje alternativo */}
-          {!loadingOfertas && !loadingDestacados && 
+          {!loading && !loadingDestacados && 
            (!ofertas || ofertas.length === 0) && 
            (!destacados || destacados.length === 0) && (
             <Section title="Próximamente">

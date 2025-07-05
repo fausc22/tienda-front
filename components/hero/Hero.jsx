@@ -10,12 +10,13 @@ const Hero = () => {
       
       {/* Imagen de fondo usando img tag - MÁS CONFIABLE */}
       <Image
-        src="/images/hero-image.png"
+        src="/tienda/images/hero-image.png"
         alt="Hero background"
         fill
         className="object-cover"
         style={{ zIndex: 1 }}
         onError={(e) => {
+          // Fallback a una imagen de Unsplash si la local no existe
           e.target.src = 'https://images.unsplash.com/photo-1556741533-6e6a62bd8b49?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80';
         }}
         priority
