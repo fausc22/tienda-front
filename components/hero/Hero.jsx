@@ -2,15 +2,21 @@ import Link from 'next/link';
 import { useConfig } from '../../context/ConfigContext';
 import Image from 'next/image';
 
+
 const Hero = () => {
   const { config } = useConfig();
 
+
+
+  
+
+  
   return (
     <section className="relative w-full h-screen min-h-[400px] max-h-[600px] overflow-hidden">
       
       {/* Imagen de fondo usando img tag - MÁS CONFIABLE */}
       <Image
-        src="/tienda/images/hero-image.png"
+        src="/images/hero-image.png"
         alt="Hero background"
         fill
         className="object-cover"

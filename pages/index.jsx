@@ -63,7 +63,7 @@ const Home = ({ onAddToCart }) => {
                 <button
                   onClick={() => {
                     scrollToTop();
-                    window.location.href = '/tienda/productos';
+                    window.location.href = '/productos';
                   }}
                   className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
                 >
@@ -107,7 +107,7 @@ const Home = ({ onAddToCart }) => {
                 <button
                   onClick={() => {
                     scrollToTop();
-                    window.location.href = '/tienda/productos';
+                    window.location.href = '/productos';
                   }}
                   className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
                 >
