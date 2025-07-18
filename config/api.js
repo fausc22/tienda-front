@@ -12,11 +12,11 @@ const getBaseURL = () => {
     // Prioridad 2: Detectar entorno por hostname para desarrollo
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       // En desarrollo local, usar localhost solo si el servidor está corriendo ahí
-      return 'http://45.58.127.47:3001';
+      return 'https://store-backend-56tz.onrender.com';
     }
     
     // Prioridad 3: Para cualquier otro caso (incluyendo build), usar servidor remoto
-    return 'http://45.58.127.47:3001';
+    return 'https://store-backend-56tz.onrender.com';
   }
   
   // Para SSR/SSG
@@ -25,7 +25,7 @@ const getBaseURL = () => {
   }
   
   // Fallback para producción
-  return 'http://45.58.127.47:3001';
+  return 'https://store-backend-56tz.onrender.com';
 };
 
 // Cliente principal con timeout estándar
