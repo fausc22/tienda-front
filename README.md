@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Tienda-Front
 
-## Getting Started
+Frontend de una tienda online desarrollada con React y Next.js, enfocada en brindar una experiencia de usuario fluida y moderna.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Tecnologías utilizadas
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Frontend:** React, Next.js  
+- **UI:** Ant Design  
+- **Estado:** React Context / Hooks  
+- **Despliegue:** Vercel / Railway (opcional)
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📋 Características principales
 
-## Learn More
+- Navegación dinámica de productos  
+- Carrito de compras interactivo  
+- Gestión de usuarios y autenticación (integración con backend)  
+- Diseño responsivo para dispositivos móviles y escritorio  
+- Integración con APIs para manejo de productos y pagos
 
-To learn more about Next.js, take a look at the following resources:
+##  📚 Uso
+Navegar por los productos disponibles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Agregar productos al carrito y gestionar cantidades
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Registrarse e iniciar sesión (según integración backend)
 
-## Deploy on Vercel
+Finalizar compras (funcionalidad sujeta a integración backend y pasarela de pagos)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠 Estructura del proyecto
+/pages: rutas y vistas principales
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+/components: componentes reutilizables UI y funcionales
+
+/context: manejo del estado global
+
+/public: assets estáticos
+
+## 🤝 Contribuciones
+Proyecto en desarrollo.
+Para colaborar:
+
+Abrí un issue con sugerencias o bugs
+
+Envía pull requests con cambios documentados
+
+## 📄 Licencia
+Licenciado bajo MIT.
+
+¡Gracias por visitar Tienda-Front! Para dudas o propuestas, contactame.
