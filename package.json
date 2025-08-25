@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:static": "cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
     "build:prod": "cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
     "build:analyze": "cross-env ANALYZE=true NODE_ENV=production next build",
     "start": "next start",
@@ -12,8 +13,11 @@
     "clean": "rimraf .next out",
     "clean:win": "if exist .next rmdir /s /q .next && if exist out rmdir /s /q out",
     "serve": "npx serve out -p 3000",
+    "serve:tienda": "npx serve out/tienda -p 3000",
     "check-build": "ls -la out/",
-    "check-build:win": "if exist out (dir out)"
+    "check-build:win": "if exist out (dir out)",
+    "export": "npm run build:static",
+    "deploy": "npm run clean && npm run build:static && npm run check-build"
   },
   "dependencies": {
     "@heroui/button": "^2.2.19",

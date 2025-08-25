@@ -16,7 +16,7 @@ const Hero = () => {
       
       {/* Imagen de fondo usando img tag - MÁS CONFIABLE */}
       <Image
-        src="/images/hero-image.png"
+        src="public/images/hero-image.png"
         alt="Hero background"
         fill
         className="object-cover"

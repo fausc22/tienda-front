@@ -5,6 +5,7 @@ import { Button } from '@heroui/button';
 import { IoMdCart, IoMdMenu, IoMdClose } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
 import { useConfig } from '../../context/ConfigContext';
+import { buildUrl, isCurrentPath } from '../../utils/linkHelper';
 
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -43,7 +44,11 @@ const Navbar = () => {
               <Link
                 key={item.name}
                 href={item.href}
-                className="hover:text-blue-200 transition-colors duration-300 text-sm lg:text-base font-medium"
+                className={`hover:text-blue-200 transition-colors duration-300 text-sm lg:text-base font-medium ${
+                  isCurrentPath(router.pathname, item.href) 
+                    ? 'text-blue-200 border-b-2 border-blue-200' 
+                    : ''
+                }`}
               >
                 {item.name}
               </Link>
@@ -99,7 +104,11 @@ const Navbar = () => {
               <Link
                 key={item.name}
                 href={item.href}
-                className="block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600 transition-colors duration-300"
+                className={`block px-3 py-2 rounded-md text-base font-medium hover:bg-blue-600 transition-colors duration-300 ${
+                  isCurrentPath(router.pathname, item.href) 
+                    ? 'bg-blue-600' 
+                    : ''
+                }`}
                 onClick={() => setMenuOpen(false)}
               >
                 {item.name}
