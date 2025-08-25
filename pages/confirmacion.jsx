@@ -1,25 +1,33 @@
 import { useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { Button } from '@heroui/button';
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
-import { IoMailOutline, IoCheckmarkCircle } from 'react-icons/io5';
+import { IoMailOutline, IoCheckmarkCircle, IoMdAlert, IoMdTime } from 'react-icons/io5';
 import { FaLocationDot } from 'react-icons/fa6';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
 import { emailApiClient, longApiClient } from '../config/api';
 
 const Confirmation = () => {
+  const router = useRouter();
   const [pedido, setPedido] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [processed, setProcessed] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState('success'); // success, pending, failure
   const { config } = useConfig();
   const { dispatch } = useCart();
   
   const hasProcessed = useRef(false);
 
   useEffect(() => {
+    // Detectar el estado del pago desde la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const status = urlParams.get('status') || 'success';
+    setPaymentStatus(status);
+
     const processPedido = async () => {
       if (hasProcessed.current || processed) {
         return;
@@ -36,7 +44,8 @@ const Confirmation = () => {
         const pedidoData = JSON.parse(pedidoStored);
         setPedido(pedidoData);
 
-        if (config && pedidoData && !hasProcessed.current) {
+        // Solo procesar si el pago fue exitoso o pendiente
+        if (config && pedidoData && !hasProcessed.current && (status === 'success' || status === 'pending')) {
           hasProcessed.current = true;
           setProcessed(true);
           
@@ -46,7 +55,14 @@ const Confirmation = () => {
           
           // PASO 1: Insertar pedido (CRÍTICO - debe funcionar)
           try {
-            await insertarPedidoBaseDatos(pedidoData);
+            // Actualizar estado según el resultado del pago
+            const estadoPedido = status === 'pending' ? 'Pendiente de pago' : 'Pendiente';
+            
+            await insertarPedidoBaseDatos({
+              ...pedidoData,
+              estado: estadoPedido,
+              estado_pago: status
+            });
             
             if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
               console.log('✅ Confirmation: Pedido insertado exitosamente');
@@ -66,7 +82,12 @@ const Confirmation = () => {
           }
           
           // PASO 2: Enviar email completamente en background (sin verificación)
-          enviarEmailEnBackground(pedidoData);
+          if (status === 'success') {
+            enviarEmailEnBackground(pedidoData);
+          }
+        } else {
+          // Para estados de falla, solo mostrar la información sin procesar
+          setLoading(false);
         }
       } catch (error) {
         console.error('❌ Confirmation: Error procesando el pedido:', error);
@@ -82,11 +103,10 @@ const Confirmation = () => {
     } else if (!config) {
       setLoading(true);
     }
-  }, [config, processed, dispatch]);
+  }, [config, processed, dispatch, router]);
 
   // Función para enviar email en background SIN feedback visual
   const enviarEmailEnBackground = async (pedido) => {
-    // Enviar completamente en background, sin await, sin try/catch que afecte la UI
     setTimeout(async () => {
       try {
         const productosParaEmail = pedido.productos.map(producto => ({
@@ -115,9 +135,8 @@ const Confirmation = () => {
         if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
           console.log('📧 Confirmation: Email enviado en background (timeout normal):', error.message);
         }
-        // No hacer nada más - el email se está enviando pero puede tomar tiempo
       }
-    }, 100); // Pequeño delay para asegurar que la UI se muestre primero
+    }, 100);
   };
 
   const insertarPedidoBaseDatos = async (pedido) => {
@@ -130,13 +149,53 @@ const Confirmation = () => {
       monto_total: pedido.monto_total,
       costo_envio: pedido.costoEnvio,
       medio_pago: pedido.medio_pago,
-      estado: 'Pendiente',
+      estado: pedido.estado,
+      estado_pago: pedido.estado_pago,
       notas_local: pedido.notas_local,
       productos: pedido.productos
     });
     
     if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
       console.log('✅ Confirmation: Pedido insertado correctamente en la base de datos:', response.data);
+    }
+  };
+
+  // Función para obtener el mensaje apropiado según el estado
+  const getStatusMessage = () => {
+    switch (paymentStatus) {
+      case 'success':
+        return {
+          title: '¡PEDIDO CONFIRMADO!',
+          subtitle: 'Pago procesado exitosamente',
+          message: 'Tu pedido ha sido confirmado y el pago se procesó correctamente.',
+          bgColor: 'from-green-50 to-blue-50',
+          headerBg: 'bg-green-50 border-green-200',
+          textColor: 'text-green-800',
+          icon: IoCheckmarkCircle,
+          iconColor: 'text-green-600'
+        };
+      case 'pending':
+        return {
+          title: '¡PEDIDO RECIBIDO!',
+          subtitle: 'Pago pendiente de aprobación',
+          message: 'Tu pedido fue recibido y está pendiente de confirmación del pago. Te notificaremos cuando se procese.',
+          bgColor: 'from-yellow-50 to-orange-50',
+          headerBg: 'bg-yellow-50 border-yellow-200',
+          textColor: 'text-yellow-800',
+          icon: IoMdTime,
+          iconColor: 'text-yellow-600'
+        };
+      default:
+        return {
+          title: '¡PEDIDO CONFIRMADO!',
+          subtitle: 'Procesamiento completado',
+          message: 'Tu pedido ha sido confirmado exitosamente.',
+          bgColor: 'from-green-50 to-blue-50',
+          headerBg: 'bg-green-50 border-green-200',
+          textColor: 'text-green-800',
+          icon: IoCheckmarkCircle,
+          iconColor: 'text-green-600'
+        };
     }
   };
 
@@ -185,6 +244,9 @@ const Confirmation = () => {
     );
   }
 
+  const statusInfo = getStatusMessage();
+  const IconComponent = statusInfo.icon;
+  
   const subtotal = pedido.productos.reduce((acc, item) => 
     acc + parseFloat(item.precio) * item.cantidad, 0
   ).toFixed(2);
@@ -198,21 +260,21 @@ const Confirmation = () => {
   return (
     <>
       <Head>
-        <title>PEDIDO CONFIRMADO - {config?.storeName || 'TIENDA'}</title>
+        <title>{statusInfo.title} - {config?.storeName || 'TIENDA'}</title>
         <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
-        <meta name="description" content="Tu pedido ha sido confirmado exitosamente" />
+        <meta name="description" content={statusInfo.message} />
       </Head>
 
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50">
+      <div className={`min-h-screen bg-gradient-to-br ${statusInfo.bgColor}`}>
         <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
           
-          {/* Header con ícono de éxito */}
+          {/* Header con ícono de estado */}
           <div className="text-center mb-6 sm:mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-green-100 rounded-full mb-4">
-              <IoCheckmarkCircle className="text-green-600 text-3xl sm:text-4xl" />
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full mb-4 shadow-lg">
+              <IconComponent className={`${statusInfo.iconColor} text-3xl sm:text-4xl`} />
             </div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-green-600 mb-2 sm:mb-4">
-              ¡PEDIDO CONFIRMADO!
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 sm:mb-4">
+              {statusInfo.title}
             </h1>
             <h2 className="text-lg sm:text-xl md:text-2xl text-blue-600 font-semibold">
               {config?.storeName || 'TIENDA'}
@@ -221,15 +283,22 @@ const Confirmation = () => {
 
           <div className="bg-white rounded-lg shadow-lg overflow-hidden">
             
-            {/* Mensaje de agradecimiento */}
-            <div className="bg-green-50 border-b border-green-200 p-4 sm:p-6">
-              <p className="text-base sm:text-lg text-green-800 text-center leading-relaxed">
+            {/* Mensaje según el estado */}
+            <div className={`${statusInfo.headerBg} border-b p-4 sm:p-6`}>
+              <p className={`text-base sm:text-lg ${statusInfo.textColor} text-center leading-relaxed`}>
                 {pedido.cliente ? `Gracias ${pedido.cliente}` : 'Gracias'} por elegirnos! 
                 <br className="sm:hidden" />
-                <span className="block sm:inline mt-1 sm:mt-0"> Tu pedido ha sido confirmado exitosamente.</span>
-                <span className="block mt-1 text-sm">
-                  Recibirás un email con todos los detalles.
-                </span>
+                <span className="block sm:inline mt-1 sm:mt-0"> {statusInfo.message}</span>
+                {paymentStatus === 'success' && (
+                  <span className="block mt-1 text-sm">
+                    Recibirás un email con todos los detalles.
+                  </span>
+                )}
+                {paymentStatus === 'pending' && (
+                  <span className="block mt-1 text-sm">
+                    Te contactaremos cuando se confirme el pago.
+                  </span>
+                )}
               </p>
             </div>
 
@@ -319,8 +388,30 @@ const Confirmation = () => {
                     <span className="font-medium text-gray-700">Método de Pago:</span>
                     <span className="font-semibold text-blue-600">{pedido.medio_pago || 'EFECTIVO'}</span>
                   </div>
+                  {paymentStatus === 'pending' && (
+                    <div className="flex justify-between items-center text-sm sm:text-base pt-2">
+                      <span className="font-medium text-gray-700">Estado del Pago:</span>
+                      <span className="font-semibold text-yellow-600">Pendiente</span>
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Mensaje adicional para pagos pendientes */}
+              {paymentStatus === 'pending' && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <div className="flex items-start gap-3">
+                    <IoMdTime className="text-yellow-500 text-xl flex-shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-semibold text-yellow-800 mb-2">Pago Pendiente</h4>
+                      <p className="text-yellow-700 text-sm leading-relaxed">
+                        Tu pago está siendo procesado. Esto puede tomar algunos minutos o hasta 24 horas según el método de pago utilizado. 
+                        Te notificaremos por email cuando se confirme.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Botón volver */}
               <div className="text-center mb-6 sm:mb-8">
@@ -330,7 +421,7 @@ const Confirmation = () => {
                     size="lg"
                     className="px-6 sm:px-8 py-3 text-base sm:text-lg font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300"
                   >
-                    🏠 VOLVER A LA TIENDA
+                    VOLVER A LA TIENDA
                   </Button>
                 </Link>
               </div>
@@ -338,7 +429,7 @@ const Confirmation = () => {
               {/* Información de contacto */}
               <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
                 <h4 className="text-lg font-bold text-center text-gray-900 mb-4">
-                  📞 Información de Contacto
+                  Información de Contacto
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                   {config?.storeInstagram && (

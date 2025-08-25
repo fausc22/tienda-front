@@ -1,11 +1,15 @@
-
-// SmartAddressInput.jsx - Versión simplificada
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdSearch, IoMdCheckmark, IoMdClose, IoMdPin, IoMdAlert } from 'react-icons/io';
 import apiClient from '../../config/api';
 
-const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '', isActive = true }) => {
+const SmartAddressInput = ({ 
+  onAddressSelect, 
+  initialValue = '', 
+  className = '', 
+  externalValue = '', // Nueva prop para valor externo
+  onInputChange = null // Nueva prop para manejar cambios externos
+}) => {
   const [address, setAddress] = useState(initialValue);
   const [suggestions, setSuggestions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -16,15 +20,15 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // Limpiar cuando el componente se vuelve inactivo
+  // Actualizar el input cuando llegue un valor externo (desde el mapa)
   useEffect(() => {
-    if (!isActive) {
-      setAddress('');
-      setSelectedAddress(null);
+    if (externalValue && externalValue !== address) {
+      setAddress(externalValue);
+      setSelectedAddress({ formatted: externalValue }); // Marcar como seleccionado
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [isActive]);
+  }, [externalValue]);
 
   // Limpiar debounce al desmontar
   useEffect(() => {
@@ -83,6 +87,11 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
     setAddress(value);
     setSelectedAddress(null);
 
+    // Notificar cambio al componente padre
+    if (onInputChange) {
+      onInputChange(value);
+    }
+
     // Limpiar timeout anterior
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
@@ -91,7 +100,7 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
     if (value.length === 0) {
       setSuggestions([]);
       setShowSuggestions(false);
-      onAddressSelect(null, 'input');
+      onAddressSelect(null);
       return;
     }
 
@@ -117,7 +126,7 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
       coordinates: suggestion.coordinates,
       components: suggestion.components,
       source: 'input'
-    }, 'input');
+    });
   };
 
   // Cerrar sugerencias al hacer clic fuera
@@ -138,7 +147,7 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
     if (isLoading) {
       return <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>;
     }
-    if (selectedAddress) {
+    if (selectedAddress || externalValue) {
       return <IoMdCheckmark className="text-green-600" />;
     }
     return <IoMdSearch className="text-gray-400" />;
@@ -153,12 +162,9 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
           type="text"
           value={address}
           onChange={handleInputChange}
-          disabled={!isActive}
           placeholder="Ej: Av. Colon 1234, Nueva Córdoba"
           className={`w-full px-4 py-3 pr-12 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 ${
-            selectedAddress ? 'border-green-500 bg-green-50' :
-            !isActive ? 'border-gray-200 bg-gray-50 text-gray-400' :
-            'border-gray-300'
+            (selectedAddress || externalValue) ? 'border-green-500 bg-green-50' : 'border-gray-300'
           }`}
         />
         
@@ -169,7 +175,7 @@ const SmartAddressInput = ({ onAddressSelect, initialValue = '', className = '',
       </div>
 
       {/* Lista de sugerencias */}
-      {showSuggestions && suggestions.length > 0 && isActive && (
+      {showSuggestions && suggestions.length > 0 && (
         <div 
           ref={suggestionsRef}
           className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"

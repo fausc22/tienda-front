@@ -65,7 +65,7 @@ const Pago = () => {
   // Estados para manejo de envío
   const [shippingCost, setShippingCost] = useState(0);
   const [selectedAddressData, setSelectedAddressData] = useState(null);
-  
+  const [addressInputValue, setAddressInputValue] = useState('');
   // Estados de UI
   const [errors, setErrors] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -121,12 +121,12 @@ const Pago = () => {
         break;
 
       case 'address':
-        if (formData.deliveryOption === 'delivery' && !selectedAddressData) {
-          newErrors.address = 'Selecciona una dirección válida';
-        } else {
-          delete newErrors.address;
-        }
-        break;
+      if (formData.deliveryOption === 'delivery' && !value.trim()) {
+        newErrors.address = 'La dirección es obligatoria para delivery';
+      } else {
+        delete newErrors.address;
+      }
+      break;
 
       case 'departmentNumber':
         if (formData.deliveryOption === 'delivery' && formData.isDepartment && !value.trim()) {
@@ -186,31 +186,53 @@ const Pago = () => {
   };
 
   // Manejar selección de dirección desde SmartAddressInput
-  const handleAddressSelect = (addressData, source) => {
-  if (addressData) {
+  const handleAddressSelect = (addressData) => {
+    if (addressData) {
+      setSelectedAddressData(addressData);
+      setFormData(prev => ({ ...prev, address: addressData.address }));
+      setShippingCost(addressData.shippingCost || 0);
+      
+      // Limpiar errores de validación
+      const newErrors = { ...errors };
+      delete newErrors.address;
+      setErrors(newErrors);
+      
+      console.log('Dirección seleccionada:', addressData);
+    } else {
+      // Limpiar selección
+      setSelectedAddressData(null);
+      setFormData(prev => ({ ...prev, address: '' }));
+      setShippingCost(0);
+      setAddressInputValue('');
+    }
+  };
+
+
+  const handleAddressInputChange = (value) => {
+    setAddressInputValue(value);
+    setFormData(prev => ({ ...prev, address: value }));
+    
+    // Si está escribiendo, limpiar selección de datos adicionales
+    if (selectedAddressData && selectedAddressData.source === 'map') {
+      setSelectedAddressData(null);
+      setShippingCost(0);
+    }
+  };
+
+    const handleMapAddressConfirm = (addressData) => {
     setSelectedAddressData(addressData);
     setFormData(prev => ({ ...prev, address: addressData.address }));
     setShippingCost(addressData.shippingCost || 0);
-    setAddressSource(source);
-    validateField('address', addressData.address);
+    setAddressInputValue(addressData.address); // Escribir en el input
+    setShowMapPicker(false);
     
-    console.log('Dirección seleccionada desde:', source, addressData);
-  } else {
-    // Limpiar selección
-    setSelectedAddressData(null);
-    setFormData(prev => ({ ...prev, address: '' }));
-    setShippingCost(0);
-    setAddressSource(null);
-    delete errors.address;
-    setErrors({ ...errors });
-  }
-};
-
-// Función actualizada para manejar confirmación desde AddressMapPicker
-const handleMapAddressConfirm = (addressData) => {
-  handleAddressSelect(addressData, 'map');
-  setShowMapPicker(false);
-};
+    // Limpiar errores de validación
+    const newErrors = { ...errors };
+    delete newErrors.address;
+    setErrors(newErrors);
+    
+    console.log('Dirección desde mapa:', addressData);
+  };
 
   const handlePaymentMethodChange = (value) => {
     if (!formData.deliveryOption) {
@@ -503,57 +525,35 @@ const handleMapAddressConfirm = (addressData) => {
         </Button>
       </div>
 
-      {/* Componente SmartAddressInput */}
+      {/* Componente SmartAddressInput con valor externo */}
       <SmartAddressInput
         onAddressSelect={handleAddressSelect}
-        initialValue={addressSource === 'input' ? formData.address : ''}
+        externalValue={addressInputValue}
+        onInputChange={handleAddressInputChange}
         className="w-full"
-        isActive={addressSource !== 'map'}
       />
 
       <ErrorMessage message={errors.address} show={!!errors.address} />
 
-      {/* Información de la dirección seleccionada */}
-      {selectedAddressData && (
-        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <IoMdCheckmarkCircle className="text-blue-600 text-lg flex-shrink-0" />
-                <span className="font-medium text-blue-800">
-                  Dirección {addressSource === 'map' ? 'desde mapa' : 'confirmada'}
-                </span>
-              </div>
-              
-              <p className="text-sm text-gray-800 mb-2">
-                {selectedAddressData.address}
-              </p>
-              
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-gray-600">
-                  📍 {selectedAddressData.distance?.toFixed(1)} km
-                </span>
-                <span className="font-medium text-blue-700">
-                  Envío: ${selectedAddressData.shippingCost?.toFixed(2)}
-                </span>
+      {/* Información adicional solo cuando viene de geocodificación */}
+      {selectedAddressData && selectedAddressData.distance && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <IoMdCheckmarkCircle className="text-blue-600 text-lg flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">
+                  {selectedAddressData.distance?.toFixed(1)} km • Envío: ${selectedAddressData.shippingCost?.toFixed(2)}
+                </p>
               </div>
             </div>
-            
-            <Button
-              onClick={() => handleAddressSelect(null, null)}
-              variant="flat"
-              size="sm"
-              className="text-gray-500 hover:text-red-600 hover:bg-red-50"
-            >
-              <IoMdClose />
-            </Button>
           </div>
         </div>
       )}
     </div>
 
-    {/* Departamento - solo mostrar si hay dirección seleccionada */}
-    {selectedAddressData && (
+    {/* Departamento - mostrar si hay texto en el input */}
+    {formData.address && (
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium text-gray-700">¿Es un departamento?</span>
