@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Button } from '@heroui/button';
 import { CiCircleCheck, CiLocationOn, CiCreditCard1, CiUser, CiPhone, CiMail } from 'react-icons/ci';
-import { IoMdClose, IoMdCheckmarkCircle, IoMdAlert, IoMdTrash } from 'react-icons/io';
+import { IoMdClose, IoMdCheckmarkCircle, IoMdAlert, IoMdTrash, IoMdPin } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
+import SmartAddressInput from '../components/pago/SmartAddressInput';
+import AddressMapPicker from '../components/pago/AddressMapPicker';
 import apiClient from '../config/api';
 
 // Componente para mostrar errores de validación
@@ -62,16 +64,14 @@ const Pago = () => {
 
   // Estados para manejo de envío
   const [shippingCost, setShippingCost] = useState(0);
-  const [addressSuggestions, setAddressSuggestions] = useState([]);
-  const [selectedAddress, setSelectedAddress] = useState(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedAddressData, setSelectedAddressData] = useState(null);
   
   // Estados de UI
   const [errors, setErrors] = useState({});
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
-
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [addressSource, setAddressSource] = useState(null); // 'input' o 'map'
   const subtotal = items.reduce((acc, item) => acc + item.total, 0);
   const finalShippingCost = formData.deliveryOption === 'local' ? 0 : shippingCost;
   const total = parseFloat(subtotal.toFixed(2)) + parseFloat(finalShippingCost.toFixed(2));
@@ -121,8 +121,8 @@ const Pago = () => {
         break;
 
       case 'address':
-        if (formData.deliveryOption === 'delivery' && !value.trim()) {
-          newErrors.address = 'La dirección es obligatoria para delivery';
+        if (formData.deliveryOption === 'delivery' && !selectedAddressData) {
+          newErrors.address = 'Selecciona una dirección válida';
         } else {
           delete newErrors.address;
         }
@@ -174,9 +174,7 @@ const Pago = () => {
     // Lógica especial para cambios en delivery option
     if (name === 'deliveryOption') {
       setFormData(prev => ({ ...prev, paymentMethod: '' }));
-      setSelectedAddress(null);
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
+      setSelectedAddressData(null);
       
       // Si selecciona "local", envío es 0
       if (newValue === 'local') {
@@ -185,63 +183,34 @@ const Pago = () => {
         setShippingCost(0); // Resetear a 0 hasta que seleccione dirección
       }
     }
-
-    // Autocompletado de direcciones
-    if (name === 'address' && newValue.length >= 3) {
-      searchAddresses(newValue);
-    } else if (name === 'address' && newValue.length < 3) {
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
-    }
   };
 
-  // Búsqueda de direcciones con autocompletado
-  const searchAddresses = async (query) => {
-    if (!query || query.length < 3) return;
-
-    setIsSearchingAddress(true);
-    try {
-      // Usar Geosearch en lugar de calculateShipping para autocompletado
-      const response = await apiClient.post('/store/searchAddresses', { 
-        query: query.trim(),
-        country: 'ar', // Bias hacia Argentina
-        limit: 5
-      });
-      
-      if (response.data.results && response.data.results.length > 0) {
-        setAddressSuggestions(response.data.results);
-        setShowSuggestions(true);
-      } else {
-        setAddressSuggestions([]);
-        setShowSuggestions(false);
-      }
-    } catch (error) {
-      console.error('Error searching addresses:', error);
-      setAddressSuggestions([]);
-      setShowSuggestions(false);
-    } finally {
-      setIsSearchingAddress(false);
-    }
-  };
-
-  const selectAddressSuggestion = (suggestion) => {
-    setFormData(prev => ({ ...prev, address: suggestion.formatted }));
-    setSelectedAddress(suggestion.formatted);
-    setShippingCost(suggestion.shippingCost || 0);
-    setAddressSuggestions([]);
-    setShowSuggestions(false);
-    validateField('address', suggestion.formatted);
-  };
-
-  const clearAddress = () => {
+  // Manejar selección de dirección desde SmartAddressInput
+  const handleAddressSelect = (addressData, source) => {
+  if (addressData) {
+    setSelectedAddressData(addressData);
+    setFormData(prev => ({ ...prev, address: addressData.address }));
+    setShippingCost(addressData.shippingCost || 0);
+    setAddressSource(source);
+    validateField('address', addressData.address);
+    
+    console.log('Dirección seleccionada desde:', source, addressData);
+  } else {
+    // Limpiar selección
+    setSelectedAddressData(null);
     setFormData(prev => ({ ...prev, address: '' }));
-    setSelectedAddress(null);
     setShippingCost(0);
-    setAddressSuggestions([]);
-    setShowSuggestions(false);
+    setAddressSource(null);
     delete errors.address;
     setErrors({ ...errors });
-  };
+  }
+};
+
+// Función actualizada para manejar confirmación desde AddressMapPicker
+const handleMapAddressConfirm = (addressData) => {
+  handleAddressSelect(addressData, 'map');
+  setShowMapPicker(false);
+};
 
   const handlePaymentMethodChange = (value) => {
     if (!formData.deliveryOption) {
@@ -270,8 +239,8 @@ const Pago = () => {
 
     // Validar direcciones para delivery
     if (formData.deliveryOption === 'delivery') {
-      if (!selectedAddress && !formData.address.trim()) {
-        newErrors.address = 'Selecciona una dirección de las sugerencias';
+      if (!selectedAddressData) {
+        newErrors.address = 'Selecciona una dirección válida';
       }
       if (formData.isDepartment && !formData.departmentNumber.trim()) {
         newErrors.departmentNumber = 'El número de departamento es obligatorio';
@@ -300,7 +269,7 @@ const Pago = () => {
       const pedido = {
         cliente: formData.name,
         direccion_cliente: formData.deliveryOption === 'delivery' 
-          ? `${selectedAddress}${formData.departmentNumber ? `, Depto: ${formData.departmentNumber}` : ''}` 
+          ? `${selectedAddressData?.address}${formData.departmentNumber ? `, Depto: ${formData.departmentNumber}` : ''}` 
           : 'Retiro en local',
         telefono_cliente: formData.phone,
         email_cliente: formData.email,
@@ -311,6 +280,12 @@ const Pago = () => {
         medio_pago: formData.paymentMethod,
         estado: 'Pendiente',
         notas_local: formData.localNote.trim() || '-',
+        // Agregar datos adicionales de dirección si están disponibles
+        ...(selectedAddressData && {
+          direccion_coords: selectedAddressData.coordinates,
+          direccion_distancia: selectedAddressData.distance,
+          direccion_componentes: selectedAddressData.components
+        }),
         productos: items.map(item => ({
           codigo_barra: item.imageUrl,
           nombre_producto: item.name,
@@ -341,6 +316,7 @@ const Pago = () => {
     <>
       <Head>
         <title>{config?.storeName ? `PAGO - ${config.storeName}` : 'PAGO - TIENDA'}</title>
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
         <meta name="description" content="Finaliza tu compra" />
       </Head>
 
@@ -508,126 +484,125 @@ const Pago = () => {
 
                 {/* Dirección para delivery */}
                 {formData.deliveryOption === 'delivery' && (
-                  <div className="mt-6 space-y-4">
-                    <InputField 
-                      label="Dirección de entrega" 
-                      icon={CiLocationOn} 
-                      error={errors.address}
-                      required
-                    >
-                      <div className="relative">
-                        <input
-                          type="text"
-                          name="address"
-                          value={formData.address}
-                          onChange={handleInputChange}
-                          className={`w-full px-3 py-2 sm:py-3 pr-20 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base ${
-                            errors.address ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                          }`}
-                          placeholder="Ej: San Lorenzo 336, Nueva Córdoba, Córdoba"
-                        />
-                        {isSearchingAddress && (
-                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                          </div>
-                        )}
-                      </div>
+  <div className="mt-6 space-y-4">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+          <CiLocationOn className="text-lg text-gray-500" />
+          Dirección de entrega
+          <span className="text-red-500">*</span>
+        </label>
+        <Button
+          onClick={() => setShowMapPicker(true)}
+          variant="flat"
+          size="sm"
+          className="text-blue-600 hover:bg-blue-50"
+        >
+          <IoMdPin className="mr-1" />
+          Seleccionar en mapa
+        </Button>
+      </div>
 
-                      {/* Sugerencias de direcciones */}
-                      {showSuggestions && addressSuggestions.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                          {addressSuggestions.map((suggestion, index) => (
-                            <button
-                              key={index}
-                              onClick={() => selectAddressSuggestion(suggestion)}
-                              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
-                            >
-                              <div className="font-medium text-gray-900 text-sm">
-                                {suggestion.formatted}
-                              </div>
-                              {suggestion.shippingCost && (
-                                <div className="text-xs text-green-600 mt-1">
-                                  Envío: ${suggestion.shippingCost.toFixed(2)}
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </InputField>
+      {/* Componente SmartAddressInput */}
+      <SmartAddressInput
+        onAddressSelect={handleAddressSelect}
+        initialValue={addressSource === 'input' ? formData.address : ''}
+        className="w-full"
+        isActive={addressSource !== 'map'}
+      />
 
-                    {(selectedAddress || formData.address) && (
-                      <div className="flex justify-start">
-                        <Button
-                          onClick={clearAddress}
-                          variant="flat"
-                          color="danger"
-                          size="sm"
-                        >
-                          <IoMdTrash className="mr-2" />
-                          Limpiar dirección
-                        </Button>
-                      </div>
-                    )}
+      <ErrorMessage message={errors.address} show={!!errors.address} />
 
-                    {shippingCost > 0 && (
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-green-700">
-                          <IoMdCheckmarkCircle className="text-lg" />
-                          <span className="font-medium">Envío: ${shippingCost.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    )}
+      {/* Información de la dirección seleccionada */}
+      {selectedAddressData && (
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <IoMdCheckmarkCircle className="text-blue-600 text-lg flex-shrink-0" />
+                <span className="font-medium text-blue-800">
+                  Dirección {addressSource === 'map' ? 'desde mapa' : 'confirmada'}
+                </span>
+              </div>
+              
+              <p className="text-sm text-gray-800 mb-2">
+                {selectedAddressData.address}
+              </p>
+              
+              <div className="flex items-center gap-4 text-sm">
+                <span className="text-gray-600">
+                  📍 {selectedAddressData.distance?.toFixed(1)} km
+                </span>
+                <span className="font-medium text-blue-700">
+                  Envío: ${selectedAddressData.shippingCost?.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            <Button
+              onClick={() => handleAddressSelect(null, null)}
+              variant="flat"
+              size="sm"
+              className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+            >
+              <IoMdClose />
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
 
-                    {/* Departamento */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <span className="text-sm font-medium text-gray-700">¿Es un departamento?</span>
-                        <div className="flex gap-4">
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="isDepartment"
-                              checked={formData.isDepartment === true}
-                              onChange={() => setFormData(prev => ({ ...prev, isDepartment: true }))}
-                              className="text-blue-600"
-                            />
-                            <span className="text-sm text-gray-700">Sí</span>
-                          </label>
-                          <label className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name="isDepartment"
-                              checked={formData.isDepartment === false}
-                              onChange={() => setFormData(prev => ({ ...prev, isDepartment: false }))}
-                              className="text-blue-600"
-                            />
-                            <span className="text-sm text-gray-700">No</span>
-                          </label>
-                        </div>
-                      </div>
+    {/* Departamento - solo mostrar si hay dirección seleccionada */}
+    {selectedAddressData && (
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-medium text-gray-700">¿Es un departamento?</span>
+          <div className="flex gap-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="isDepartment"
+                checked={formData.isDepartment === true}
+                onChange={() => setFormData(prev => ({ ...prev, isDepartment: true }))}
+                className="text-blue-600"
+              />
+              <span className="text-sm text-gray-700">Sí</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="isDepartment"
+                checked={formData.isDepartment === false}
+                onChange={() => setFormData(prev => ({ ...prev, isDepartment: false }))}
+                className="text-blue-600"
+              />
+              <span className="text-sm text-gray-700">No</span>
+            </label>
+          </div>
+        </div>
 
-                      {formData.isDepartment && (
-                        <InputField 
-                          label="Número de departamento" 
-                          error={errors.departmentNumber}
-                          required
-                        >
-                          <input
-                            type="text"
-                            name="departmentNumber"
-                            value={formData.departmentNumber}
-                            onChange={handleInputChange}
-                            className={`w-full px-3 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base ${
-                              errors.departmentNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                            }`}
-                            placeholder="Ej: 4B, Piso 2 Depto A"
-                          />
-                        </InputField>
-                      )}
-                    </div>
-                  </div>
-                )}
+        {formData.isDepartment && (
+          <InputField 
+            label="Número de departamento" 
+            error={errors.departmentNumber}
+            required
+          >
+            <input
+              type="text"
+              name="departmentNumber"
+              value={formData.departmentNumber}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 sm:py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm sm:text-base ${
+                errors.departmentNumber ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              placeholder="Ej: 4B, Piso 2 Depto A"
+            />
+          </InputField>
+        )}
+      </div>
+    )}
+  </div>
+)}
               </div>
 
               {/* Método de Pago */}
@@ -720,7 +695,7 @@ const Pago = () => {
                             src={`https://www.rsoftware.com.ar/imgart/${item.imageUrl}.png`}
                             alt={item.name}
                             onError={(e) => {
-                              e.target.src = '/images/placeholder.png';
+                              e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
                             }}
                           />
                         </div>
@@ -796,6 +771,14 @@ const Pago = () => {
             </div>
           </div>
         </div>
+
+        {/* AddressMapPicker Modal */}
+        <AddressMapPicker
+          isOpen={showMapPicker}
+          onClose={() => setShowMapPicker(false)}
+          onConfirm={handleMapAddressConfirm}
+          initialAddress={selectedAddressData}
+        />
 
         {/* Modal de confirmación */}
         {showConfirmModal && (

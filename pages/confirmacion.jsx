@@ -199,6 +199,7 @@ const Confirmation = () => {
     <>
       <Head>
         <title>PEDIDO CONFIRMADO - {config?.storeName || 'TIENDA'}</title>
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
         <meta name="description" content="Tu pedido ha sido confirmado exitosamente" />
       </Head>
 

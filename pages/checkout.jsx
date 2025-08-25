@@ -51,7 +51,7 @@ function TablaDesktop({
                       alt={item.name}
                       className="w-16 h-16 object-contain bg-gray-50 rounded-lg"
                       onError={(e) => {
-                        e.target.src = '/images/placeholder.png';
+                        e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
                       }}
                     />
                     <div>
@@ -144,7 +144,7 @@ function CardsMovil({
                   alt={item.name}
                   className="w-20 h-20 object-contain bg-gray-50 rounded-lg flex-shrink-0"
                   onError={(e) => {
-                    e.target.src = '/images/placeholder.png';
+                    e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
                   }}
                 />
                 <div className="flex-1 min-w-0">
@@ -279,6 +279,7 @@ const Checkout = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `CARRITO - ${config.storeName}` : 'CARRITO - TIENDA'}</title>
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
         <meta name="description" content="Revisa tu carrito de compras" />
       </Head>
 

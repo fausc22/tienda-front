@@ -5,7 +5,8 @@ import { useProducts } from '../hooks/useProducts';
 import { useConfig } from '../context/ConfigContext';
 import CardProduct from '../components/product/CardProduct';
 import Hero from '../components/hero/Hero';
-import HeroSlider from '../components/hero/HeroSlider';
+// import HeroSlider from '../components/hero/HeroSlider';
+import BrandCarousel from '../components/showcase/BrandCarousel';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
 import Section from '../components/common/Section';
 import { useOfertas } from '../hooks/useOfertas';
@@ -30,7 +31,7 @@ const Home = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `INICIO - ${config.storeName}` : 'INICIO - TIENDA'}</title>
-        <link rel="icon" href="../public/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
         <meta name="description" content={config?.storeDescription || 'Tienda online'} />
       </Head>
 
@@ -63,7 +64,7 @@ const Home = ({ onAddToCart }) => {
                 <button
                   onClick={() => {
                     scrollToTop();
-                    window.location.href = '/productos';
+                    window.location.href = '/tienda/productos';
                   }}
                   className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
                 >
@@ -84,7 +85,11 @@ const Home = ({ onAddToCart }) => {
           )}
 
           {/* Hero Slider - Siempre se muestra */}
-          <HeroSlider />
+          {/* <HeroSlider /> */}
+
+          <BrandCarousel />
+
+
 
           {/* Productos Destacados Section - Solo si hay productos destacados */}
           {shouldShowSection(destacados, loadingDestacados) && (
@@ -107,7 +112,7 @@ const Home = ({ onAddToCart }) => {
                 <button
                   onClick={() => {
                     scrollToTop();
-                    window.location.href = '/productos';
+                    window.location.href = '/tienda/productos';
                   }}
                   className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
                 >

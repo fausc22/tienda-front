@@ -2,21 +2,22 @@ import Link from 'next/link';
 import { useConfig } from '../../context/ConfigContext';
 import Image from 'next/image';
 
-
 const Hero = () => {
   const { config } = useConfig();
 
+  // Helper para rutas de assets estáticos
+  const getAssetPath = (path) => {
+    // En producción con basePath, Next.js maneja esto automáticamente
+    // Solo necesitamos la ruta relativa sin 'public/'
+    return path.startsWith('/') ? path : `/${path}`;
+  };
 
-
-  
-
-  
   return (
     <section className="relative w-full h-screen min-h-[400px] max-h-[600px] overflow-hidden">
       
-      {/* Imagen de fondo usando img tag - MÁS CONFIABLE */}
+      {/* Imagen de fondo usando Next.js Image - RUTA CORREGIDA */}
       <Image
-        src="public/images/hero-image.png"
+        src="https://vps-5234411-x.dattaweb.com/api/images/hero-image.png"
         alt="Hero background"
         fill
         className="object-cover"
@@ -27,7 +28,6 @@ const Hero = () => {
         }}
         priority
       />
-
       
       {/* Overlay oscuro para mejorar legibilidad */}
       <div 

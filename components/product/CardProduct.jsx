@@ -8,7 +8,7 @@ import { formatPrice } from '../../hooks/useProducts'; // Importar la función d
 
 const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   const [quantity, setQuantity] = useState(0);
-  const [finalImageUrl, setFinalImageUrl] = useState(`${getApiBaseURL()}/images/placeholder.png`);
+  const [finalImageUrl, setFinalImageUrl] = useState(`https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const { dispatch } = useCart();
@@ -21,7 +21,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
   useEffect(() => {
     const getProductImage = async () => {
       if (!imageUrl) {
-        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
+        const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
         setFinalImageUrl(placeholderUrl);
         setImageLoading(false);
         return;
@@ -51,7 +51,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
       } catch (error) {
         console.error('❌ CardProduct: Error getting product image:', error);
         // Construir URL de placeholder usando la base URL de la API
-        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
+        const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
         setFinalImageUrl(placeholderUrl);
         setImageError(true);
       } finally {
@@ -120,7 +120,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
           }`}
           onLoad={() => setImageLoading(false)}
           onError={(e) => {
-            const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
+            const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
             if (e.target.src !== placeholderUrl) {
               e.target.src = placeholderUrl;
               setImageError(true);

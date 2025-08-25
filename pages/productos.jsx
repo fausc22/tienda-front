@@ -58,6 +58,12 @@ const Products = () => {
     fetchCategories();
   }, []);
 
+
+
+
+
+
+
   // Cargar productos principales al montar y cuando cambie la página
   useEffect(() => {
     if (!hasSearched && !selectedCategory) {
@@ -67,18 +73,33 @@ const Products = () => {
 
   // Función para obtener productos principales
   const fetchMainProducts = async (page = 1) => {
-    setLoading(true);
-    try {
-      const response = await apiClient.get(`/store/productosMAIN?page=${page}&limit=30`);
-      setAllProducts(response.data.data || []);
-      setPagination(response.data.pagination || {});
-    } catch (error) {
-      console.error('Error fetching main products:', error);
-      setAllProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        console.log('📦 Obteniendo productos principales - página:', page);
+        
+        // 🆕 Usar path parameters en lugar de query parameters
+        const url = `/store/productosMAIN/${page}/30`;
+        console.log('🌐 URL productos principales:', url);
+        
+        const response = await apiClient.get(url);
+        
+        console.log('✅ Respuesta productos principales:', {
+          status: response.status,
+          dataLength: response.data?.data?.length || 0,
+          pagination: response.data?.pagination
+        });
+        
+        setAllProducts(response.data.data || []);
+        setPagination(response.data.pagination || {});
+      } catch (error) {
+        console.error('❌ Error obteniendo productos principales:', error);
+        setAllProducts([]);
+        setPagination({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
 
   // Determinar qué productos mostrar
   const displayProducts = () => {
@@ -96,26 +117,62 @@ const Products = () => {
 
   // Función de búsqueda
   const handleSearch = async (e, page = 1) => {
-    if (e) e.preventDefault();
-    if (!searchTerm.trim()) return;
+  if (e) e.preventDefault();
+  
+  const trimmedSearchTerm = searchTerm?.trim() || '';
+  
+  console.log('🔍 Iniciando búsqueda:', {
+    searchTerm: searchTerm,
+    trimmedSearchTerm: trimmedSearchTerm,
+    length: trimmedSearchTerm.length,
+    page: page
+  });
+  
+  if (!trimmedSearchTerm || trimmedSearchTerm.length < 2) {
+    console.warn('⚠️ Término de búsqueda muy corto:', trimmedSearchTerm);
+    setSearchResults([]);
+    setPagination({});
+    return;
+  }
 
-    setIsSearching(true);
-    setHasSearched(true);
-    setSelectedCategory(null);
-    setCurrentPage(page);
+  setIsSearching(true);
+  setHasSearched(true);
+  setSelectedCategory(null);
+  setCurrentPage(page);
 
-    try {
-      const response = await apiClient.get(`/store/buscar?q=${encodeURIComponent(searchTerm)}&page=${page}&limit=30`);
-      setSearchResults(response.data.data || []);
-      setPagination(response.data.pagination || {});
-    } catch (error) {
-      console.error('Error searching products:', error);
-      setSearchResults([]);
-      setPagination({});
-    } finally {
-      setIsSearching(false);
-    }
-  };
+  try {
+    // 🆕 Usar path parameters en lugar de query parameters
+    const encodedSearchTerm = encodeURIComponent(trimmedSearchTerm);
+    const url = `/store/buscar/${encodedSearchTerm}/${page}/30`;
+    console.log('🌐 URL de búsqueda:', url);
+    
+    const response = await apiClient.get(url);
+    
+    console.log('✅ Respuesta de búsqueda:', {
+      status: response.status,
+      dataLength: response.data?.data?.length || 0,
+      pagination: response.data?.pagination
+    });
+    
+    setSearchResults(response.data.data || []);
+    setPagination(response.data.pagination || {});
+    
+  } catch (error) {
+    console.error('❌ Error en búsqueda:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      searchTerm: trimmedSearchTerm,
+      page: page,
+      url: `/store/buscar/${encodeURIComponent(trimmedSearchTerm)}/${page}/30`
+    });
+    
+    setSearchResults([]);
+    setPagination({});
+  } finally {
+    setIsSearching(false);
+  }
+};
 
   // Función para limpiar búsqueda
   const handleReset = () => {
@@ -129,25 +186,69 @@ const Products = () => {
   };
 
   // Función para seleccionar categoría
-  const handleSelectCategory = async (categoryName, page = 1) => {
-    setIsLoadingCategoryProducts(true);
-    setSelectedCategory(categoryName);
-    setHasSearched(false);
-    setShowCategoriesMenu(false);
-    setCurrentPage(page);
+const handleSelectCategory = async (categoryName, page = 1) => {
+  console.log('🏷️ Seleccionando categoría:', {
+    categoryName: categoryName,
+    page: page
+  });
+  
+  setIsLoadingCategoryProducts(true);
+  setSelectedCategory(categoryName);
+  setHasSearched(false);
+  setShowCategoriesMenu(false);
+  setCurrentPage(page);
 
+  try {
+    // 🆕 CORREGIDO: Usar path parameters igual que búsqueda y productos principales
+    const encodedCategoryName = encodeURIComponent(categoryName);
+    const url = `/store/articulos/${encodedCategoryName}/${page}/30`;
+    
+    console.log('🌐 URL de categoría (path params):', url);
+    
+    const response = await apiClient.get(url);
+    
+    console.log('✅ Respuesta de categoría:', {
+      status: response.status,
+      dataLength: response.data?.data?.length || 0,
+      pagination: response.data?.pagination,
+      currentPage: response.data?.pagination?.currentPage,
+      totalPages: response.data?.pagination?.totalPages
+    });
+    
+    setCategoryProducts(response.data.data || []);
+    setPagination(response.data.pagination || {});
+    
+  } catch (error) {
+    console.error('❌ Error obteniendo categoría:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      categoryName: categoryName,
+      page: page,
+      url: `/store/articulos/${encodeURIComponent(categoryName)}/${page}/30`
+    });
+    
+    // Si falla con path parameters, intentar con query parameters como fallback
     try {
-      const response = await apiClient.get(`/store/articulos/${encodeURIComponent(categoryName)}?page=${page}&limit=30`);
-      setCategoryProducts(response.data.data || []);
-      setPagination(response.data.pagination || {});
-    } catch (error) {
-      console.error('Error fetching category products:', error);
+      console.log('🔄 Intentando con query parameters como fallback...');
+      const fallbackUrl = `/store/articulos/${encodeURIComponent(categoryName)}`;
+      const fallbackResponse = await apiClient.get(fallbackUrl, { 
+        params: { page: page.toString(), limit: '30' } 
+      });
+      
+      console.log('✅ Fallback exitoso:', fallbackResponse.data);
+      setCategoryProducts(fallbackResponse.data.data || []);
+      setPagination(fallbackResponse.data.pagination || {});
+      
+    } catch (fallbackError) {
+      console.error('❌ Error en fallback también:', fallbackError);
       setCategoryProducts([]);
       setPagination({});
-    } finally {
-      setIsLoadingCategoryProducts(false);
     }
-  };
+  } finally {
+    setIsLoadingCategoryProducts(false);
+  }
+};
 
   // Función para mostrar todos los productos
   const handleShowAll = () => {
@@ -161,17 +262,29 @@ const Products = () => {
   };
 
   // Manejar cambio de página
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    
-    if (hasSearched) {
-      handleSearch(null, page);
-    } else if (selectedCategory) {
-      handleSelectCategory(selectedCategory, page);
-    } else {
-      fetchMainProducts(page);
-    }
-  };
+const handlePageChange = (page) => {
+  console.log('📄 Cambiando a página:', {
+    currentPage: currentPage,
+    newPage: page,
+    hasSearched: hasSearched,
+    selectedCategory: selectedCategory,
+    searchTerm: searchTerm?.trim(),
+    pagination: pagination
+  });
+  
+  setCurrentPage(page);
+  
+  if (hasSearched && searchTerm?.trim()) {
+    console.log('🔍 Paginación de búsqueda');
+    handleSearch(null, page);
+  } else if (selectedCategory) {
+    console.log('🏷️ Paginación de categoría:', selectedCategory);
+    handleSelectCategory(selectedCategory, page);
+  } else {
+    console.log('📦 Paginación de productos principales');
+    fetchMainProducts(page);
+  }
+};
 
   const currentProducts = displayProducts();
   const currentPagination = getCurrentPagination();
@@ -181,6 +294,7 @@ const Products = () => {
     <>
       <Head>
         <title>{config?.storeName ? `PRODUCTOS - ${config.storeName}` : 'PRODUCTOS - TIENDA'}</title>
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
         <meta name="description" content="Explora nuestro catálogo de productos" />
       </Head>
 
