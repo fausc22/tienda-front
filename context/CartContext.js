@@ -9,7 +9,8 @@ const cartReducer = (state, action) => {
       return { ...state, items: action.payload };
     
     case 'ADD_ITEM': {
-      const { name, price, imageUrl, quantity } = action.payload;
+      // ✅ AGREGAR codInterno al destructuring
+      const { name, price, imageUrl, quantity, codInterno } = action.payload;
       const existingIndex = state.items.findIndex(item => item.name === name);
       
       let newItems;
@@ -24,7 +25,8 @@ const cartReducer = (state, action) => {
           quantity,
           price,
           total: price * quantity,
-          imageUrl
+          imageUrl,
+          codInterno // ✅ AGREGAR codInterno al item
         }];
       }
       
@@ -60,7 +62,6 @@ export const CartProvider = ({ children }) => {
     items: [],
   });
   
-  // 🔹 Nueva bandera para saber si ya cargamos desde localStorage
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Cargar carrito desde localStorage AL INICIO
@@ -74,13 +75,11 @@ export const CartProvider = ({ children }) => {
         console.error('Error loading cart from localStorage:', error);
       }
     }
-    // 🔹 Marcar como cargado independientemente de si había datos o no
     setIsLoaded(true);
   }, []);
 
   // Guardar carrito en localStorage cuando cambie - SOLO después de cargar
   useEffect(() => {
-    // 🔹 Solo guardar si ya cargamos los datos iniciales
     if (isLoaded) {
       localStorage.setItem('cart', JSON.stringify(state.items));
     }
@@ -95,7 +94,7 @@ export const CartProvider = ({ children }) => {
       totalItems,
       totalPrice,
       dispatch,
-      isLoaded // 🔹 Exponer el estado de carga por si necesitas usarlo
+      isLoaded
     }}>
       {children}
     </CartContext.Provider>
@@ -108,4 +107,4 @@ export const useCart = () => {
     throw new Error('useCart debe usarse dentro de CartProvider');
   }
   return context;
-};  
+};

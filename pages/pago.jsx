@@ -309,10 +309,11 @@ const Pago = () => {
           direccion_componentes: selectedAddressData.components
         }),
         productos: items.map(item => ({
-          codigo_barra: item.imageUrl,
+          codigo_barra: item.imageUrl, 
+          cod_interno: item.codInterno, 
           nombre_producto: item.name,
           cantidad: item.quantity,
-          precio: item.total.toFixed(2)
+          precio: item.price.toFixed(2) 
         }))
       };
 
@@ -692,7 +693,7 @@ const Pago = () => {
                         <div className="h-12 w-12 flex-shrink-0">
                           <img
                             className="h-12 w-12 rounded-md object-contain bg-gray-50"
-                            src={`https://www.rsoftware.com.ar/imgart/${item.imageUrl}.png`}
+                            src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
                             alt={item.name}
                             onError={(e) => {
                               e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';

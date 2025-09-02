@@ -2,65 +2,17 @@ import { useState, useEffect } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
-import apiClient, { getApiBaseURL } from '../../config/api';
 import toast from 'react-hot-toast';
-import { formatPrice } from '../../hooks/useProducts'; // Importar la función de formateo
+import { formatPrice } from '../../hooks/useProducts';
 
-const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
+const CardProduct = ({ name, price, imageUrl, originalPrice, codInterno }) => {
   const [quantity, setQuantity] = useState(0);
-  const [finalImageUrl, setFinalImageUrl] = useState(`https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
   const { dispatch } = useCart();
 
   // Formatear los precios al recibir las props
   const formattedPrice = formatPrice(price);
   const formattedOriginalPrice = originalPrice ? formatPrice(originalPrice) : null;
-  const numericPrice = Math.round(parseFloat(price)); // Para cálculos
-
-  useEffect(() => {
-    const getProductImage = async () => {
-      if (!imageUrl) {
-        const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
-        setFinalImageUrl(placeholderUrl);
-        setImageLoading(false);
-        return;
-      }
-
-      setImageLoading(true);
-      setImageError(false);
-
-      try {
-        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-          console.log('🖼️ CardProduct: Obteniendo imagen para', imageUrl);
-        }
-
-        // Llamada ÚNICA AL BACKEND que maneja los 3 casos (externa, interna, placeholder)
-        const response = await apiClient.get(`/store/image/${imageUrl}`);
-        
-        if (response.data.success) {
-          setFinalImageUrl(response.data.imageUrl);
-          
-          if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-            console.log('✅ CardProduct: Imagen obtenida:', response.data.source, response.data.imageUrl);
-          }
-        } else {
-          throw new Error('Failed to get image from backend');
-        }
-        
-      } catch (error) {
-        console.error('❌ CardProduct: Error getting product image:', error);
-        // Construir URL de placeholder usando la base URL de la API
-        const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
-        setFinalImageUrl(placeholderUrl);
-        setImageError(true);
-      } finally {
-        setImageLoading(false);
-      }
-    };
-
-    getProductImage();
-  }, [imageUrl]);
+  const numericPrice = Math.round(parseFloat(price));
 
   const handleIncrease = () => {
     setQuantity(prev => prev + 1);
@@ -77,8 +29,9 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
       type: 'ADD_ITEM',
       payload: {
         name,
-        price: numericPrice, // Usar precio numérico para el carrito
+        price: numericPrice,
         imageUrl,
+        codInterno,
         quantity
       }
     });
@@ -95,7 +48,6 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
     setQuantity(0);
   };
 
-  // Calcular total redondeado
   const total = Math.round(numericPrice * quantity);
 
   return (
@@ -103,37 +55,14 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
       
       {/* Contenedor de imagen */}
       <div className="w-full h-24 sm:h-28 md:h-32 lg:h-36 mb-2 sm:mb-3 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative">
-        
-        {/* Loading state */}
-        {imageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-          </div>
-        )}
-        
-        {/* Imagen principal */}
         <img
-          src={finalImageUrl}
+          src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl}.png`}
           alt={name}
-          className={`max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105 ${
-            imageLoading ? 'opacity-0' : 'opacity-100'
-          }`}
-          onLoad={() => setImageLoading(false)}
+          className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105"
           onError={(e) => {
-            const placeholderUrl = `https://vps-5234411-x.dattaweb.com/api/images/placeholder.png`;
-            if (e.target.src !== placeholderUrl) {
-              e.target.src = placeholderUrl;
-              setImageError(true);
-            }
+            e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
           }}
         />
-        
-        {/* Indicador de error de imagen en modo debug */}
-        {imageError && process.env.NEXT_PUBLIC_DEBUG === 'true' && (
-          <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-            ⚠️
-          </div>
-        )}
       </div>
 
       {/* Información del producto */}
@@ -199,7 +128,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice }) => {
             fullWidth
             color="primary"
             onClick={handleAddToCart}
-            disabled={quantity === 0 || imageLoading}
+            disabled={quantity === 0}
             className="font-medium text-xs sm:text-sm h-7 sm:h-8 md:h-9 px-2"
             size="sm"
           >

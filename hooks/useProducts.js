@@ -8,7 +8,7 @@ const formatPrice = (price) => {
   return Math.round(parseFloat(price)).toFixed(2);
 };
 
-// Función para procesar productos y redondear precios
+// Función para procesar productos y redondear precios + COD_INTERNO
 const processProductPrices = (products) => {
   if (!Array.isArray(products)) return products;
   
@@ -18,7 +18,9 @@ const processProductPrices = (products) => {
     COSTO: product.COSTO ? formatPrice(product.COSTO) : product.COSTO,
     PRECIO_DESC: product.PRECIO_DESC ? formatPrice(product.PRECIO_DESC) : product.PRECIO_DESC,
     // También formatear price si existe (para compatibilidad)
-    price: product.price ? formatPrice(product.price) : (product.PRECIO ? formatPrice(product.PRECIO) : undefined)
+    price: product.price ? formatPrice(product.price) : (product.PRECIO ? formatPrice(product.PRECIO) : undefined),
+    // ← AGREGADO: Normalizar COD_INTERNO para uso consistente
+    codInterno: product.COD_INTERNO || product.cod_interno
   }));
 };
 

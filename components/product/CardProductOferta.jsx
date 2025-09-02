@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
-import apiClient, { getApiBaseURL } from '../../config/api';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts';
 
@@ -12,67 +11,21 @@ const CardProductOferta = ({
   offerPrice,       // PRECIO_DESC - precio de oferta
   imageUrl, 
   codigoBarra,
+  codInterno,       // Agregado COD_INTERNO
   stock = 0
 }) => {
   const [quantity, setQuantity] = useState(0);
-  const [finalImageUrl, setFinalImageUrl] = useState(`${getApiBaseURL()}/images/placeholder.png`);
-  const [imageLoading, setImageLoading] = useState(true);
-  const [imageError, setImageError] = useState(false);
   const { dispatch } = useCart();
 
   // Formatear los precios
   const formattedOriginalPrice = formatPrice(originalPrice);
   const formattedOfferPrice = formatPrice(offerPrice);
-  const numericOfferPrice = Math.round(parseFloat(offerPrice)); // Para cálculos del carrito
+  const numericOfferPrice = Math.round(parseFloat(offerPrice));
 
   // Calcular porcentaje de descuento
   const discountPercentage = originalPrice && offerPrice 
     ? Math.round(((originalPrice - offerPrice) / originalPrice) * 100)
     : 0;
-
-  useEffect(() => {
-    const getProductImage = async () => {
-      if (!imageUrl && !codigoBarra) {
-        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
-        setFinalImageUrl(placeholderUrl);
-        setImageLoading(false);
-        return;
-      }
-
-      setImageLoading(true);
-      setImageError(false);
-
-      try {
-        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-          console.log('🖼️ CardProductOferta: Obteniendo imagen para', imageUrl || codigoBarra);
-        }
-
-        // Intentar con imageUrl si está disponible, sino con código de barra
-        const imageIdentifier = imageUrl || codigoBarra;
-        const response = await apiClient.get(`/store/image/${imageIdentifier}`);
-        
-        if (response.data.success) {
-          setFinalImageUrl(response.data.imageUrl);
-          
-          if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-            console.log('✅ CardProductOferta: Imagen obtenida:', response.data.source, response.data.imageUrl);
-          }
-        } else {
-          throw new Error('Failed to get image from backend');
-        }
-        
-      } catch (error) {
-        console.error('❌ CardProductOferta: Error getting product image:', error);
-        const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
-        setFinalImageUrl(placeholderUrl);
-        setImageError(true);
-      } finally {
-        setImageLoading(false);
-      }
-    };
-
-    getProductImage();
-  }, [imageUrl, codigoBarra]);
 
   const handleIncrease = () => {
     setQuantity(prev => prev + 1);
@@ -91,6 +44,7 @@ const CardProductOferta = ({
         name,
         price: numericOfferPrice, // Usar precio de oferta para el carrito
         imageUrl: imageUrl || codigoBarra,
+        codInterno, // Agregado COD_INTERNO
         quantity,
         isOffer: true, // Marcar como oferta para el carrito
         originalPrice: Math.round(parseFloat(originalPrice))
@@ -111,7 +65,6 @@ const CardProductOferta = ({
     setQuantity(0);
   };
 
-  // Calcular total con precio de oferta
   const total = Math.round(numericOfferPrice * quantity);
 
   return (
@@ -137,37 +90,14 @@ const CardProductOferta = ({
 
       {/* Contenedor de imagen */}
       <div className="w-full h-24 sm:h-28 md:h-32 lg:h-36 mb-2 sm:mb-3 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative">
-        
-        {/* Loading state */}
-        {imageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
-          </div>
-        )}
-        
-        {/* Imagen principal */}
         <img
-          src={finalImageUrl}
+          src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl || codigoBarra}.png`}
           alt={name}
-          className={`max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105 ${
-            imageLoading ? 'opacity-0' : 'opacity-100'
-          }`}
-          onLoad={() => setImageLoading(false)}
+          className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105"
           onError={(e) => {
-            const placeholderUrl = `${getApiBaseURL()}/images/placeholder.png`;
-            if (e.target.src !== placeholderUrl) {
-              e.target.src = placeholderUrl;
-              setImageError(true);
-            }
+            e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
           }}
         />
-        
-        {/* Indicador de error de imagen en modo debug */}
-        {imageError && process.env.NEXT_PUBLIC_DEBUG === 'true' && (
-          <div className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded">
-            ⚠️
-          </div>
-        )}
 
         {/* Overlay de oferta en hover */}
         <div className="absolute inset-0 bg-red-500 bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-300 flex items-center justify-center">
@@ -214,8 +144,6 @@ const CardProductOferta = ({
             </div>
           )}
         </div>
-
-        
 
         {/* Controles de cantidad */}
         <div className="flex items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2">
@@ -265,7 +193,7 @@ const CardProductOferta = ({
             fullWidth
             color="danger"
             onClick={handleAddToCart}
-            disabled={quantity === 0 || imageLoading || (stock > 0 && quantity > stock)}
+            disabled={quantity === 0 || (stock > 0 && quantity > stock)}
             className="font-medium text-xs sm:text-sm h-7 sm:h-8 md:h-9 px-2 bg-red-600 hover:bg-red-700 shadow-md"
             size="sm"
           >
@@ -273,10 +201,7 @@ const CardProductOferta = ({
             <span className="block sm:hidden">🔥 Agregar</span>
             <span className="hidden sm:block">Agregar al carrito</span>
           </Button>
-
         </div>
-
-        
       </div>
     </div>
   );

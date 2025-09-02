@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Button } from '@heroui/button';
 import { FaInstagram, FaWhatsapp } from 'react-icons/fa';
-import { IoMailOutline, IoCheckmarkCircle, IoMdAlert, IoMdTime } from 'react-icons/io5';
+import { IoMailOutline, IoCheckmarkCircle, IoMdAlert,  } from 'react-icons/io5';
 import { FaLocationDot } from 'react-icons/fa6';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
@@ -182,8 +182,6 @@ const Confirmation = () => {
           bgColor: 'from-yellow-50 to-orange-50',
           headerBg: 'bg-yellow-50 border-yellow-200',
           textColor: 'text-yellow-800',
-          icon: IoMdTime,
-          iconColor: 'text-yellow-600'
         };
       default:
         return {
@@ -399,9 +397,9 @@ const Confirmation = () => {
 
               {/* Mensaje adicional para pagos pendientes */}
               {paymentStatus === 'pending' && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div className="bg-yellow-50 border border-yellow-200c rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
-                    <IoMdTime className="text-yellow-500 text-xl flex-shrink-0 mt-1" />
+                    
                     <div>
                       <h4 className="font-semibold text-yellow-800 mb-2">Pago Pendiente</h4>
                       <p className="text-yellow-700 text-sm leading-relaxed">

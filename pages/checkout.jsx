@@ -47,7 +47,7 @@ function TablaDesktop({
                 <td className="p-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={`https://www.rsoftware.com.ar/imgart/${item.imageUrl}.png`}
+                      src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}  // ← NUEVA URL
                       alt={item.name}
                       className="w-16 h-16 object-contain bg-gray-50 rounded-lg"
                       onError={(e) => {
@@ -140,7 +140,7 @@ function CardsMovil({
               {/* Header de la card */}
               <div className="flex items-start gap-4 mb-4">
                 <img
-                  src={`https://www.rsoftware.com.ar/imgart/${item.imageUrl}.png`}
+                  src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}  // ← NUEVA URL
                   alt={item.name}
                   className="w-20 h-20 object-contain bg-gray-50 rounded-lg flex-shrink-0"
                   onError={(e) => {
@@ -388,6 +388,7 @@ const Checkout = ({ onAddToCart }) => {
                     name={product.art_desc_vta}
                     price={product.PRECIO}
                     imageUrl={product.CODIGO_BARRA}
+                    codInterno={product.COD_INTERNO}  // ← AGREGADO
                     onAddToCart={onAddToCart}
                     reloadOnAdd={true}
                   />

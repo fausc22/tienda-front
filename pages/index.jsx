@@ -97,14 +97,15 @@ const Home = ({ onAddToCart }) => {
               {/* Grid responsivo para productos */}
               <div className="w-full grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 px-2 sm:px-4">
                 {destacados.slice(0, 10).map((articulo, index) => (
-                  <CardProduct
-                    key={index}
-                    name={articulo.art_desc_vta}
-                    price={articulo.PRECIO}
-                    imageUrl={articulo.CODIGO_BARRA}
-                    onAddToCart={onAddToCart}
-                  />
-                ))}
+                    <CardProduct
+                      key={index}
+                      name={articulo.art_desc_vta}
+                      price={articulo.PRECIO}
+                      imageUrl={articulo.CODIGO_BARRA}
+                      codInterno={articulo.COD_INTERNO}  // ← AGREGADO
+                      onAddToCart={onAddToCart}
+                    />
+                  ))}
               </div>
 
               {/* Botón Ver Más */}
