@@ -77,10 +77,15 @@ const Pago = () => {
   const total = parseFloat(subtotal.toFixed(2)) + parseFloat(finalShippingCost.toFixed(2));
 
   // Redireccionar si no hay productos
+  // Redireccionar si no hay productos (con delay para permitir hidratación)
   useEffect(() => {
-    if (items.length === 0) {
-      router.push('/checkout');
-    }
+    const timer = setTimeout(() => {
+      if (items.length === 0) {
+        router.push('/tienda/checkout');
+      }
+    }, 100); // Pequeño delay para permitir que el contexto se hidrate
+
+    return () => clearTimeout(timer);
   }, [items, router]);
 
   // Validaciones en tiempo real

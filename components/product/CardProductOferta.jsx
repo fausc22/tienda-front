@@ -42,11 +42,11 @@ const CardProductOferta = ({
       type: 'ADD_ITEM',
       payload: {
         name,
-        price: numericOfferPrice, // Usar precio de oferta para el carrito
+        price: numericOfferPrice,
         imageUrl: imageUrl || codigoBarra,
-        codInterno, // Agregado COD_INTERNO
+        cod_interno: codInterno || 0, // ✅ CAMBIAR de codInterno a cod_interno
         quantity,
-        isOffer: true, // Marcar como oferta para el carrito
+        isOffer: true,
         originalPrice: Math.round(parseFloat(originalPrice))
       }
     });

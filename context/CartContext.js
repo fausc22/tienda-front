@@ -9,8 +9,7 @@ const cartReducer = (state, action) => {
       return { ...state, items: action.payload };
     
     case 'ADD_ITEM': {
-      // ✅ AGREGAR codInterno al destructuring
-      const { name, price, imageUrl, quantity, codInterno } = action.payload;
+      const { name, price, imageUrl, quantity, codInterno, cod_interno } = action.payload;
       const existingIndex = state.items.findIndex(item => item.name === name);
       
       let newItems;
@@ -26,7 +25,7 @@ const cartReducer = (state, action) => {
           price,
           total: price * quantity,
           imageUrl,
-          codInterno // ✅ AGREGAR codInterno al item
+          cod_interno: cod_interno || codInterno || 0 // ✅ Aceptar ambas variaciones y usar 0 como fallback
         }];
       }
       

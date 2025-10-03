@@ -1,3 +1,5 @@
+// pages/checkout.jsx - ACTUALIZAR PARA INCLUIR VERIFICACIÓN DE HORARIOS
+
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -7,12 +9,15 @@ import { IoMdAdd, IoMdRemove, IoMdTrash } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import { useProducts, useRelatedProducts } from '../hooks/useProducts';
+import { useHorarios } from '../hooks/useHorarios'; // 🆕 NUEVO IMPORT
 import CardProduct from '../components/product/CardProduct';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
+import HorariosModal from '../components/horarios/HorariosModal'; // 🆕 NUEVO IMPORT
+import LiquidacionModal from '../components/liquidacion/LiquidacionModal';
 import Section from '../components/common/Section';
 import toast from 'react-hot-toast';
 
-// Componente para tabla en desktop
+// Componente para tabla en desktop (sin cambios)
 function TablaDesktop({ 
   items, 
   handleQuantityChange, 
@@ -47,7 +52,7 @@ function TablaDesktop({
                 <td className="p-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}  // ← NUEVA URL
+                      src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
                       alt={item.name}
                       className="w-16 h-16 object-contain bg-gray-50 rounded-lg"
                       onError={(e) => {
@@ -122,7 +127,7 @@ function TablaDesktop({
   );
 }
 
-// Componente para cards en móvil
+// Componente para cards en móvil (sin cambios en la lógica, solo la estructura)
 function CardsMovil({ 
   items, 
   handleQuantityChange, 
@@ -140,7 +145,7 @@ function CardsMovil({
               {/* Header de la card */}
               <div className="flex items-start gap-4 mb-4">
                 <img
-                  src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}  // ← NUEVA URL
+                  src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
                   alt={item.name}
                   className="w-20 h-20 object-contain bg-gray-50 rounded-lg flex-shrink-0"
                   onError={(e) => {
@@ -227,14 +232,41 @@ const Checkout = ({ onAddToCart }) => {
   const { items, totalPrice, dispatch } = useCart();
   const { config } = useConfig();
   const { products: relatedProducts, loading: loadingRelated, error: errorRelated } = useRelatedProducts(items);
+  
+  // 🆕 NUEVO - Hook para verificar horarios
+  const { 
+    horarioInfo, 
+    loading: loadingHorarios, 
+    estaAbierto, 
+    obtenerMensajePedidoFueraHorario 
+  } = useHorarios(true, 2); // Auto-refresh cada 2 minutos
+
+  // Estados para el modal y confirmación de horarios
+  const [showHorariosModal, setShowHorariosModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
- // Debug mejorado
+  const [horariosConfirmados, setHorariosConfirmados] = useState(false);
+  const [showLiquidacionModal, setShowLiquidacionModal] = useState(false);
+
+  // 🆕 NUEVO - Efecto para mostrar modal cuando está cerrado
+  useEffect(() => {
+    // Solo mostrar el modal si:
+    // 1. Ya terminó de cargar los horarios
+    // 2. La tienda está cerrada
+    // 3. Hay items en el carrito
+    // 4. No se ha confirmado previamente
+    if (!loadingHorarios && !estaAbierto && items.length > 0 && !horariosConfirmados) {
+      setShowHorariosModal(true);
+    }
+  }, [loadingHorarios, estaAbierto, items.length, horariosConfirmados]);
+
+  // Debug mejorado
   useEffect(() => {
     console.log('🛒 Items del carrito enviados al backend:', items);
     console.log('🔗 Productos relacionados recibidos:', relatedProducts);
     console.log('📊 Cantidad:', relatedProducts?.length || 0);
   }, [items, relatedProducts]);
+
   const handleQuantityChange = (id, newQuantity) => {
     if (newQuantity <= 0) {
       setItemToDelete(id);
@@ -275,6 +307,41 @@ const Checkout = ({ onAddToCart }) => {
     setItemToDelete(null);
   };
 
+  // 🆕 NUEVO - Manejar confirmación de horarios
+  const handleConfirmarHorarios = () => {
+    setHorariosConfirmados(true);
+    setShowHorariosModal(false);
+    toast.success('Entendido. Tu pedido será procesado cuando abramos.', {
+      duration: 3000,
+      icon: '✅'
+    });
+  };
+
+    const handleProcederPago = () => {
+    if (items.length === 0) return;
+
+    // Si está cerrado y no se ha confirmado, mostrar modal de horarios primero
+    if (!estaAbierto && !horariosConfirmados) {
+      setShowHorariosModal(true);
+      return;
+    }
+
+    // 🆕 NUEVO: Mostrar modal de liquidación ANTES de ir al pago
+    setShowLiquidacionModal(true);
+  };
+
+  const handleConfirmarPagoFinal = () => {
+    setShowLiquidacionModal(false);
+    window.location.href = '/tienda/pago';
+  };
+
+  const handleAddFromLiquidacion = (productData) => {
+    dispatch({
+      type: 'ADD_ITEM',
+      payload: productData
+    });
+  };
+
   return (
     <>
       <Head>
@@ -292,6 +359,8 @@ const Checkout = ({ onAddToCart }) => {
               Tu Carrito de Compras
             </h1>
             <div className="w-16 sm:w-20 md:w-24 h-0.5 bg-blue-600 mx-auto lg:mx-0 mb-6"></div>
+            
+            
           </div>
 
           {/* Contenido principal */}
@@ -351,21 +420,45 @@ const Checkout = ({ onAddToCart }) => {
                       </div>
                     </div>
                   </div>
+
+                  {/* 🆕 NUEVO - Aviso si está cerrado */}
+                  {!loadingHorarios && !estaAbierto && items.length > 0 && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-yellow-600 mt-0.5">⚠️</span>
+                        <div>
+                          <p className="text-sm font-medium text-yellow-800">
+                            Local cerrado
+                          </p>
+                          <p className="text-xs text-yellow-700 mt-1">
+                            Tu pedido será procesado cuando abramos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Acciones */}
                 <div className="p-4 sm:p-6 space-y-3">
-                  <Link 
-                    href="/pago"
+                  <button
+                    onClick={handleProcederPago}
+                    disabled={items.length === 0}
                     className={`block w-full text-center py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                       items.length === 0 
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                        : estaAbierto
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
+                        : 'bg-orange-600 hover:bg-orange-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                     }`}
-                    style={{ pointerEvents: items.length === 0 ? 'none' : 'auto' }}
                   >
-                    {items.length === 0 ? 'Carrito vacío' : 'Proceder al pago'}
-                  </Link>
+                    {items.length === 0 
+                      ? 'Carrito vacío' 
+                      : estaAbierto 
+                      ? 'Proceder al pago'
+                      : 'Continuar pedido (cerrado)'
+                    }
+                  </button>
                   
                   <Link 
                     href="/productos"
@@ -388,7 +481,7 @@ const Checkout = ({ onAddToCart }) => {
                     name={product.art_desc_vta}
                     price={product.PRECIO}
                     imageUrl={product.CODIGO_BARRA}
-                    codInterno={product.COD_INTERNO}  // ← AGREGADO
+                    codInterno={product.COD_INTERNO}
                     onAddToCart={onAddToCart}
                     reloadOnAdd={true}
                   />
@@ -408,7 +501,16 @@ const Checkout = ({ onAddToCart }) => {
           <WhatsAppButton />
         </div>
 
-        {/* Modal de confirmación */}
+        {/* 🆕 NUEVO - Modal de horarios */}
+        <HorariosModal
+          isOpen={showHorariosModal}
+          onClose={() => setShowHorariosModal(false)}
+          onContinuar={handleConfirmarHorarios}
+          mensajeInfo={obtenerMensajePedidoFueraHorario()}
+          showContinueButton={true}
+        />
+
+        {/* Modal de confirmación de eliminación (sin cambios) */}
         {showConfirmDialog && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
@@ -439,6 +541,14 @@ const Checkout = ({ onAddToCart }) => {
             </div>
           </div>
         )}
+
+        {/* 🆕 NUEVO - Modal de Liquidación */}
+        <LiquidacionModal
+          isOpen={showLiquidacionModal}
+          onClose={() => setShowLiquidacionModal(false)}
+          onProcederPago={handleConfirmarPagoFinal}
+          onAddToCart={handleAddFromLiquidacion}
+        />
       </div>
     </>
   );
