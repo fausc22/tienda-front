@@ -31,7 +31,8 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, codInterno }) => {
         name,
         price: numericPrice,
         imageUrl,
-        cod_interno: codInterno || 0, // ✅ CAMBIAR de codInterno a cod_interno
+        cod_interno: codInterno || 0, // ✅ Asegurar que siempre tenga un valor
+        codigo_barra: imageUrl, // ✅ AGREGAR para tener referencia
         quantity
       }
     });

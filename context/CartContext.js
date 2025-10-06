@@ -12,6 +12,9 @@ const cartReducer = (state, action) => {
       const { name, price, imageUrl, quantity, codInterno, cod_interno } = action.payload;
       const existingIndex = state.items.findIndex(item => item.name === name);
       
+      // ✅ NORMALIZAR cod_interno - aceptar ambas variaciones
+      const normalizedCodInterno = cod_interno || codInterno || 0;
+      
       let newItems;
       if (existingIndex >= 0) {
         newItems = [...state.items];
@@ -25,7 +28,8 @@ const cartReducer = (state, action) => {
           price,
           total: price * quantity,
           imageUrl,
-          cod_interno: cod_interno || codInterno || 0 // ✅ Aceptar ambas variaciones y usar 0 como fallback
+          codigo_barra: imageUrl, // ✅ AGREGAR para tener ambas referencias
+          cod_interno: normalizedCodInterno // ✅ Usar valor normalizado
         }];
       }
       

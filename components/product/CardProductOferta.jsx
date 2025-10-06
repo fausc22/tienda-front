@@ -44,7 +44,8 @@ const CardProductOferta = ({
         name,
         price: numericOfferPrice,
         imageUrl: imageUrl || codigoBarra,
-        cod_interno: codInterno || 0, // ✅ CAMBIAR de codInterno a cod_interno
+        cod_interno: codInterno || 0, // ✅ Asegurar valor
+        codigo_barra: imageUrl || codigoBarra, // ✅ AGREGAR
         quantity,
         isOffer: true,
         originalPrice: Math.round(parseFloat(originalPrice))
