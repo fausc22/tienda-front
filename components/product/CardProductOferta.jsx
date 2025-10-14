@@ -11,7 +11,7 @@ const CardProductOferta = ({
   offerPrice,       // PRECIO_DESC - precio de oferta
   imageUrl, 
   codigoBarra,
-  codInterno,       // Agregado COD_INTERNO
+  cod_interno,       // Agregado COD_INTERNO
   stock = 0
 }) => {
   const [quantity, setQuantity] = useState(0);
@@ -44,7 +44,7 @@ const CardProductOferta = ({
         name,
         price: numericOfferPrice,
         imageUrl: imageUrl || codigoBarra,
-        cod_interno: codInterno || 0, // ✅ Asegurar valor
+        cod_interno: cod_interno, // ✅ Asegurar valor
         codigo_barra: imageUrl || codigoBarra, // ✅ AGREGAR
         quantity,
         isOffer: true,

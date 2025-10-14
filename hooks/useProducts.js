@@ -20,7 +20,7 @@ const processProductPrices = (products) => {
     // También formatear price si existe (para compatibilidad)
     price: product.price ? formatPrice(product.price) : (product.PRECIO ? formatPrice(product.PRECIO) : undefined),
     // ← AGREGADO: Normalizar COD_INTERNO para uso consistente
-    codInterno: product.COD_INTERNO || product.cod_interno
+    cod_interno: product.COD_INTERNO || product.cod_interno 
   }));
 };
 

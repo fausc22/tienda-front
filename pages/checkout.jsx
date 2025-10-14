@@ -481,7 +481,7 @@ const Checkout = ({ onAddToCart }) => {
                     name={product.art_desc_vta}
                     price={product.PRECIO}
                     imageUrl={product.CODIGO_BARRA}
-                    codInterno={product.COD_INTERNO}
+                    cod_interno={product.cod_interno} 
                     onAddToCart={onAddToCart}
                     reloadOnAdd={true}
                   />

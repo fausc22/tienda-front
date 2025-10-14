@@ -314,12 +314,12 @@ const Pago = () => {
           direccion_componentes: selectedAddressData.components
         }),
         productos: items.map(item => ({
-          codigo_barra: item.imageUrl, 
-          cod_interno: item.codInterno, 
-          nombre_producto: item.name,
-          cantidad: item.quantity,
-          precio: item.price.toFixed(2) 
-        }))
+        codigo_barra: item.imageUrl || item.codigo_barra,
+        cod_interno: item.cod_interno || 0, // ✅ Usar siempre snake_case como en la BD
+        nombre_producto: item.name,
+        cantidad: item.quantity,
+        precio: item.price.toFixed(2) 
+      }))
       };
 
       localStorage.setItem('pedido', JSON.stringify(pedido));

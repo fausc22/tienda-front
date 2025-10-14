@@ -471,7 +471,7 @@ const handlePageChange = (page) => {
                         name={producto.art_desc_vta}
                         price={producto.PRECIO}
                         imageUrl={producto.CODIGO_BARRA}
-                        codInterno={producto.COD_INTERNO}  // ← AGREGADO
+                        cod_interno={producto.COD_INTERNO}  // ← AGREGADO
                       />
                     ))}
                   </div>

@@ -55,6 +55,7 @@ const Home = ({ onAddToCart }) => {
                     imageUrl={articulo.imageUrl}
                     codigoBarra={articulo.codigoBarra}
                     stock={articulo.stock}
+                    cod_interno={articulo.cod_interno}
                   />
                 ))}
               </div>
@@ -102,7 +103,7 @@ const Home = ({ onAddToCart }) => {
                       name={articulo.art_desc_vta}
                       price={articulo.PRECIO}
                       imageUrl={articulo.CODIGO_BARRA}
-                      codInterno={articulo.COD_INTERNO}  // ← AGREGADO
+                      cod_interno={articulo.cod_interno}  // ← AGREGADO
                       onAddToCart={onAddToCart}
                     />
                   ))}

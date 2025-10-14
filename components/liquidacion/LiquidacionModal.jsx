@@ -48,7 +48,7 @@ const LiquidacionModal = ({
       price: parseFloat(producto.PRECIO_DESC || producto.PRECIO),
       imageUrl: producto.CODIGO_BARRA,
       quantity: cantidad,
-      codInterno: producto.COD_INTERNO || producto.cod_interno
+      cod_interno: producto.COD_INTERNO || producto.cod_interno
     });
 
     toast.success(`${cantidad}x ${producto.art_desc_vta} agregado${cantidad > 1 ? 's' : ''}`, {

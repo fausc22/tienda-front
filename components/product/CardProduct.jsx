@@ -5,7 +5,7 @@ import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts';
 
-const CardProduct = ({ name, price, imageUrl, originalPrice, codInterno }) => {
+const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
   const [quantity, setQuantity] = useState(0);
   const { dispatch } = useCart();
 
@@ -31,7 +31,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, codInterno }) => {
         name,
         price: numericPrice,
         imageUrl,
-        cod_interno: codInterno || 0, // ✅ Asegurar que siempre tenga un valor
+        cod_interno: cod_interno, // ✅ Asegurar que siempre tenga un valor
         codigo_barra: imageUrl, // ✅ AGREGAR para tener referencia
         quantity
       }

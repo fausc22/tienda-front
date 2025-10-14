@@ -8,33 +8,32 @@ const cartReducer = (state, action) => {
     case 'LOAD_CART':
       return { ...state, items: action.payload };
     
-    case 'ADD_ITEM': {
-      const { name, price, imageUrl, quantity, codInterno, cod_interno } = action.payload;
-      const existingIndex = state.items.findIndex(item => item.name === name);
-      
-      // ✅ NORMALIZAR cod_interno - aceptar ambas variaciones
-      const normalizedCodInterno = cod_interno || codInterno || 0;
-      
-      let newItems;
-      if (existingIndex >= 0) {
-        newItems = [...state.items];
-        newItems[existingIndex].quantity += quantity;
-        newItems[existingIndex].total = newItems[existingIndex].quantity * price;
-      } else {
-        newItems = [...state.items, {
-          id: uuidv4(),
-          name,
-          quantity,
-          price,
-          total: price * quantity,
-          imageUrl,
-          codigo_barra: imageUrl, // ✅ AGREGAR para tener ambas referencias
-          cod_interno: normalizedCodInterno // ✅ Usar valor normalizado
-        }];
-      }
-      
-      return { ...state, items: newItems };
+   case 'ADD_ITEM': {
+    const { name, price, imageUrl, quantity, cod_interno } = action.payload;
+    
+    // Ya no necesitas normalizar, siempre viene cod_interno
+    const existingIndex = state.items.findIndex(item => item.name === name);
+    
+    let newItems;
+    if (existingIndex >= 0) {
+      newItems = [...state.items];
+      newItems[existingIndex].quantity += quantity;
+      newItems[existingIndex].total = newItems[existingIndex].quantity * price;
+    } else {
+      newItems = [...state.items, {
+        id: uuidv4(),
+        name,
+        quantity,
+        price,
+        total: price * quantity,
+        imageUrl,
+        codigo_barra: imageUrl,
+        cod_interno: cod_interno || 0 // ✅ Simplificado
+      }];
     }
+    
+    return { ...state, items: newItems };
+  }
     
     case 'REMOVE_ITEM':
       return {

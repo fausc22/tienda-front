@@ -36,7 +36,7 @@ export const useOfertas = () => {
           // Información adicional
           stock: parseInt(item.STOCK) || 0,
           pesable: item.PESABLE === 'S',
-          codInterno: item.COD_INTERNO,
+          cod_interno: item.COD_INTERNO,
           
           // Calcular descuento
           discountPercentage: item.PRECIO && item.PRECIO_DESC 
