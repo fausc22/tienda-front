@@ -1,20 +1,32 @@
 import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import { Button } from '@heroui/button';
-import { IoMdSearch, IoMdClose, IoMdMenu, IoMdFunnel } from 'react-icons/io';
+import { IoMdClose, IoMdMenu, IoMdFunnel } from 'react-icons/io';
 import { useConfig } from '../context/ConfigContext';
 import CardProduct from '../components/product/CardProduct';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
 import Pagination from '../components/common/Pagination';
+import SearchBar from '../components/search/SearchBar';
+import { useInstantSearch } from '../hooks/useProductSearch';
 import apiClient from '../config/api';
 
 const Products = () => {
-  // Estados principales
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
-  
+  // 🆕 Hook de búsqueda instantánea
+  const {
+    searchTerm,
+    setSearchTerm,
+    suggestions,
+    results: searchResults,
+    loading: isSearching,
+    showSuggestions,
+    setShowSuggestions,
+    pagination: searchPagination,
+    hasSearched,
+    handleSelectSuggestion,
+    executeFullSearch,
+    clearSearch
+  } = useInstantSearch();
+
   // Estados de productos principales
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,12 +70,6 @@ const Products = () => {
     fetchCategories();
   }, []);
 
-
-
-
-
-
-
   // Cargar productos principales al montar y cuando cambie la página
   useEffect(() => {
     if (!hasSearched && !selectedCategory) {
@@ -73,33 +79,31 @@ const Products = () => {
 
   // Función para obtener productos principales
   const fetchMainProducts = async (page = 1) => {
-      setLoading(true);
-      try {
-        console.log('📦 Obteniendo productos principales - página:', page);
-        
-        // 🆕 Usar path parameters en lugar de query parameters
-        const url = `/store/productosMAIN/${page}/30`;
-        console.log('🌐 URL productos principales:', url);
-        
-        const response = await apiClient.get(url);
-        
-        console.log('✅ Respuesta productos principales:', {
-          status: response.status,
-          dataLength: response.data?.data?.length || 0,
-          pagination: response.data?.pagination
-        });
-        
-        setAllProducts(response.data.data || []);
-        setPagination(response.data.pagination || {});
-      } catch (error) {
-        console.error('❌ Error obteniendo productos principales:', error);
-        setAllProducts([]);
-        setPagination({});
-      } finally {
-        setLoading(false);
-      }
-    };
-
+    setLoading(true);
+    try {
+      console.log('📦 Obteniendo productos principales - página:', page);
+      
+      const url = `/store/productosMAIN/${page}/30`;
+      console.log('🌐 URL productos principales:', url);
+      
+      const response = await apiClient.get(url);
+      
+      console.log('✅ Respuesta productos principales:', {
+        status: response.status,
+        dataLength: response.data?.data?.length || 0,
+        pagination: response.data?.pagination
+      });
+      
+      setAllProducts(response.data.data || []);
+      setPagination(response.data.pagination || {});
+    } catch (error) {
+      console.error('❌ Error obteniendo productos principales:', error);
+      setAllProducts([]);
+      setPagination({});
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Determinar qué productos mostrar
   const displayProducts = () => {
@@ -110,181 +114,126 @@ const Products = () => {
 
   // Determinar qué información de paginación usar
   const getCurrentPagination = () => {
-    // Para búsquedas y categorías, usar su propia paginación
-    // Para productos principales, usar el estado de paginación principal
+    if (hasSearched) return searchPagination;
+    if (selectedCategory) return pagination;
     return pagination;
   };
 
-  // Función de búsqueda
-  const handleSearch = async (e, page = 1) => {
-  if (e) e.preventDefault();
-  
-  const trimmedSearchTerm = searchTerm?.trim() || '';
-  
-  console.log('🔍 Iniciando búsqueda:', {
-    searchTerm: searchTerm,
-    trimmedSearchTerm: trimmedSearchTerm,
-    length: trimmedSearchTerm.length,
-    page: page
-  });
-  
-  if (!trimmedSearchTerm || trimmedSearchTerm.length < 2) {
-    console.warn('⚠️ Término de búsqueda muy corto:', trimmedSearchTerm);
-    setSearchResults([]);
-    setPagination({});
-    return;
-  }
-
-  setIsSearching(true);
-  setHasSearched(true);
-  setSelectedCategory(null);
-  setCurrentPage(page);
-
-  try {
-    // 🆕 Usar path parameters en lugar de query parameters
-    const encodedSearchTerm = encodeURIComponent(trimmedSearchTerm);
-    const url = `/store/buscar/${encodedSearchTerm}/${page}/30`;
-    console.log('🌐 URL de búsqueda:', url);
-    
-    const response = await apiClient.get(url);
-    
-    console.log('✅ Respuesta de búsqueda:', {
-      status: response.status,
-      dataLength: response.data?.data?.length || 0,
-      pagination: response.data?.pagination
-    });
-    
-    setSearchResults(response.data.data || []);
-    setPagination(response.data.pagination || {});
-    
-  } catch (error) {
-    console.error('❌ Error en búsqueda:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
-      searchTerm: trimmedSearchTerm,
-      page: page,
-      url: `/store/buscar/${encodeURIComponent(trimmedSearchTerm)}/${page}/30`
-    });
-    
-    setSearchResults([]);
-    setPagination({});
-  } finally {
-    setIsSearching(false);
-  }
-};
-
-  // Función para limpiar búsqueda
-  const handleReset = () => {
-    setSearchTerm('');
-    setSearchResults([]);
-    setHasSearched(false);
+  // 🆕 Función de búsqueda completa
+  const handleSearch = () => {
+    if (searchTerm.trim().length < 2) return;
     setSelectedCategory(null);
     setCategoryProducts([]);
     setCurrentPage(1);
-    fetchMainProducts(1); // Recargar productos principales
+    executeFullSearch(searchTerm, 1);
+  };
+
+  // 🆕 Función para limpiar búsqueda
+  const handleReset = () => {
+    clearSearch();
+    setSelectedCategory(null);
+    setCategoryProducts([]);
+    setCurrentPage(1);
+    fetchMainProducts(1);
   };
 
   // Función para seleccionar categoría
-const handleSelectCategory = async (categoryName, page = 1) => {
-  console.log('🏷️ Seleccionando categoría:', {
-    categoryName: categoryName,
-    page: page
-  });
-  
-  setIsLoadingCategoryProducts(true);
-  setSelectedCategory(categoryName);
-  setHasSearched(false);
-  setShowCategoriesMenu(false);
-  setCurrentPage(page);
-
-  try {
-    // 🆕 CORREGIDO: Usar path parameters igual que búsqueda y productos principales
-    const encodedCategoryName = encodeURIComponent(categoryName);
-    const url = `/store/articulos/${encodedCategoryName}/${page}/30`;
-    
-    console.log('🌐 URL de categoría (path params):', url);
-    
-    const response = await apiClient.get(url);
-    
-    console.log('✅ Respuesta de categoría:', {
-      status: response.status,
-      dataLength: response.data?.data?.length || 0,
-      pagination: response.data?.pagination,
-      currentPage: response.data?.pagination?.currentPage,
-      totalPages: response.data?.pagination?.totalPages
-    });
-    
-    setCategoryProducts(response.data.data || []);
-    setPagination(response.data.pagination || {});
-    
-  } catch (error) {
-    console.error('❌ Error obteniendo categoría:', {
-      message: error.message,
-      status: error.response?.status,
-      data: error.response?.data,
+  const handleSelectCategory = async (categoryName, page = 1) => {
+    console.log('🏷️ Seleccionando categoría:', {
       categoryName: categoryName,
-      page: page,
-      url: `/store/articulos/${encodeURIComponent(categoryName)}/${page}/30`
+      page: page
     });
     
-    // Si falla con path parameters, intentar con query parameters como fallback
+    setIsLoadingCategoryProducts(true);
+    setSelectedCategory(categoryName);
+    clearSearch(); // 🆕 Limpiar búsqueda al seleccionar categoría
+    setShowCategoriesMenu(false);
+    setCurrentPage(page);
+
     try {
-      console.log('🔄 Intentando con query parameters como fallback...');
-      const fallbackUrl = `/store/articulos/${encodeURIComponent(categoryName)}`;
-      const fallbackResponse = await apiClient.get(fallbackUrl, { 
-        params: { page: page.toString(), limit: '30' } 
+      const encodedCategoryName = encodeURIComponent(categoryName);
+      const url = `/store/articulos/${encodedCategoryName}/${page}/30`;
+      
+      console.log('🌐 URL de categoría (path params):', url);
+      
+      const response = await apiClient.get(url);
+      
+      console.log('✅ Respuesta de categoría:', {
+        status: response.status,
+        dataLength: response.data?.data?.length || 0,
+        pagination: response.data?.pagination,
+        currentPage: response.data?.pagination?.currentPage,
+        totalPages: response.data?.pagination?.totalPages
       });
       
-      console.log('✅ Fallback exitoso:', fallbackResponse.data);
-      setCategoryProducts(fallbackResponse.data.data || []);
-      setPagination(fallbackResponse.data.pagination || {});
+      setCategoryProducts(response.data.data || []);
+      setPagination(response.data.pagination || {});
       
-    } catch (fallbackError) {
-      console.error('❌ Error en fallback también:', fallbackError);
-      setCategoryProducts([]);
-      setPagination({});
+    } catch (error) {
+      console.error('❌ Error obteniendo categoría:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        categoryName: categoryName,
+        page: page,
+        url: `/store/articulos/${encodeURIComponent(categoryName)}/${page}/30`
+      });
+      
+      // Fallback con query parameters
+      try {
+        console.log('🔄 Intentando con query parameters como fallback...');
+        const fallbackUrl = `/store/articulos/${encodeURIComponent(categoryName)}`;
+        const fallbackResponse = await apiClient.get(fallbackUrl, { 
+          params: { page: page.toString(), limit: '30' } 
+        });
+        
+        console.log('✅ Fallback exitoso:', fallbackResponse.data);
+        setCategoryProducts(fallbackResponse.data.data || []);
+        setPagination(fallbackResponse.data.pagination || {});
+        
+      } catch (fallbackError) {
+        console.error('❌ Error en fallback también:', fallbackError);
+        setCategoryProducts([]);
+        setPagination({});
+      }
+    } finally {
+      setIsLoadingCategoryProducts(false);
     }
-  } finally {
-    setIsLoadingCategoryProducts(false);
-  }
-};
+  };
 
   // Función para mostrar todos los productos
   const handleShowAll = () => {
     setSelectedCategory(null);
     setCategoryProducts([]);
-    setHasSearched(false);
-    setSearchResults([]);
+    clearSearch(); // 🆕 Limpiar búsqueda
     setShowCategoriesMenu(false);
     setCurrentPage(1);
     fetchMainProducts(1);
   };
 
-  // Manejar cambio de página
-const handlePageChange = (page) => {
-  console.log('📄 Cambiando a página:', {
-    currentPage: currentPage,
-    newPage: page,
-    hasSearched: hasSearched,
-    selectedCategory: selectedCategory,
-    searchTerm: searchTerm?.trim(),
-    pagination: pagination
-  });
-  
-  setCurrentPage(page);
-  
-  if (hasSearched && searchTerm?.trim()) {
-    console.log('🔍 Paginación de búsqueda');
-    handleSearch(null, page);
-  } else if (selectedCategory) {
-    console.log('🏷️ Paginación de categoría:', selectedCategory);
-    handleSelectCategory(selectedCategory, page);
-  } else {
-    console.log('📦 Paginación de productos principales');
-    fetchMainProducts(page);
-  }
-};
+  // 🆕 Manejar cambio de página actualizado
+  const handlePageChange = (page) => {
+    console.log('📄 Cambiando a página:', {
+      currentPage: currentPage,
+      newPage: page,
+      hasSearched: hasSearched,
+      selectedCategory: selectedCategory,
+      searchTerm: searchTerm?.trim()
+    });
+    
+    setCurrentPage(page);
+    
+    if (hasSearched && searchTerm?.trim()) {
+      console.log('🔍 Paginación de búsqueda');
+      executeFullSearch(searchTerm, page);
+    } else if (selectedCategory) {
+      console.log('🏷️ Paginación de categoría:', selectedCategory);
+      handleSelectCategory(selectedCategory, page);
+    } else {
+      console.log('📦 Paginación de productos principales');
+      fetchMainProducts(page);
+    }
+  };
 
   const currentProducts = displayProducts();
   const currentPagination = getCurrentPagination();
@@ -310,7 +259,7 @@ const handlePageChange = (page) => {
               <button
                 onClick={handleShowAll}
                 className={`w-full text-left px-4 py-3 rounded-lg mb-2 transition-colors duration-200 ${
-                  !selectedCategory 
+                  !selectedCategory && !hasSearched
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -356,7 +305,7 @@ const handlePageChange = (page) => {
                 </h1>
                 <div className="w-16 sm:w-20 md:w-24 h-0.5 bg-blue-600 mx-auto lg:mx-0 mb-6"></div>
 
-                {/* Controles de búsqueda y filtros */}
+                {/* 🆕 Controles de búsqueda y filtros con nuevo SearchBar */}
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   
                   {/* Botón de categorías - Solo móvil */}
@@ -373,58 +322,94 @@ const handlePageChange = (page) => {
                     )}
                   </button>
 
-                  {/* Formulario de búsqueda */}
-                  <form onSubmit={handleSearch} className="flex-1 flex gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder="Buscar productos..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-base"
-                      />
-                      <IoMdSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xl" />
-                    </div>
-                    
-                    <Button
-                      type="submit"
-                      color="primary"
-                      disabled={!searchTerm.trim() || isSearching}
-                      isLoading={isSearching}
-                      className="px-6 py-3 font-medium"
-                    >
-                      Buscar
-                    </Button>
-                    
-                    {(hasSearched || selectedCategory) && (
-                      <Button
-                        type="button"
-                        variant="flat"
-                        color="danger"
-                        onClick={handleReset}
-                        className="px-4 py-3"
-                      >
-                        <IoMdClose className="text-xl" />
-                      </Button>
-                    )}
-                  </form>
+                  {/* 🆕 Nuevo componente SearchBar con sugerencias */}
+                  <SearchBar
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    suggestions={suggestions}
+                    loading={isSearching}
+                    showSuggestions={showSuggestions}
+                    setShowSuggestions={setShowSuggestions}
+                    onSelectSuggestion={handleSelectSuggestion}
+                    onSearch={handleSearch}
+                    onClear={handleReset}
+                  />
                 </div>
 
                 {/* Indicador de filtro activo */}
-                {(hasSearched || selectedCategory) && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {hasSearched && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                      Búsqueda: &quot;{searchTerm}&quot;  
-                    </span>
-                    )}
-                    {selectedCategory && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-green-100 text-green-800">
-                        Categoría: {selectedCategory}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* Indicador de filtro activo */}
+{(hasSearched || selectedCategory) && (
+  <div className="mt-4 flex flex-wrap items-center gap-2">
+    {/* Badge de búsqueda + Botón cerrar */}
+    {hasSearched && (
+      <div className="inline-flex items-center gap-2">
+        {/* Badge de búsqueda (sin botón) */}
+        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-blue-100 text-blue-800 border border-blue-200">
+          <span className="font-medium">
+            Búsqueda: &quot;{searchTerm}&quot;
+          </span>
+        </span>
+
+        {/* Botón X separado */}
+        <button
+          onClick={() => {
+            clearSearch();
+            if (selectedCategory) {
+              handleSelectCategory(selectedCategory, 1);
+            } else {
+              fetchMainProducts(1);
+            }
+          }}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 hover:bg-red-200 border border-red-200 transition-colors group"
+          aria-label="Quitar búsqueda"
+        >
+          <IoMdClose className="text-lg group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
+    )}
+
+    {/* Badge de categoría + Botón cerrar */}
+    {selectedCategory && (
+      <div className="inline-flex items-center gap-2">
+        {/* Badge de categoría (sin botón) */}
+        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm bg-green-100 text-green-800 border border-green-200">
+          <span className="font-medium">
+            Categoría: {selectedCategory}
+          </span>
+        </span>
+
+        {/* Botón X separado */}
+        <button
+          onClick={() => {
+            setSelectedCategory(null);
+            setCategoryProducts([]);
+            setCurrentPage(1);
+            if (hasSearched) {
+              executeFullSearch(searchTerm, 1);
+            } else {
+              fetchMainProducts(1);
+            }
+          }}
+          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-600 hover:bg-red-200 border border-red-200 transition-colors group"
+          aria-label="Quitar categoría"
+        >
+          <IoMdClose className="text-lg group-hover:scale-110 transition-transform" />
+        </button>
+      </div>
+    )}
+
+    {/* Botón "Limpiar todo" (solo si hay más de un filtro) */}
+    {hasSearched && selectedCategory && (
+      <button
+        onClick={handleReset}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-red-500 text-white hover:bg-red-600 border border-red-600 transition-colors shadow-sm"
+      >
+        <IoMdClose className="text-base" />
+        <span>Limpiar todo</span>
+      </button>
+    )}
+  </div>
+)}
               </div>
 
               {/* Grid de Productos */}
@@ -471,7 +456,7 @@ const handlePageChange = (page) => {
                         name={producto.art_desc_vta}
                         price={producto.PRECIO}
                         imageUrl={producto.CODIGO_BARRA}
-                        cod_interno={producto.COD_INTERNO}  // ← AGREGADO
+                        cod_interno={producto.COD_INTERNO}
                       />
                     ))}
                   </div>
@@ -516,7 +501,7 @@ const handlePageChange = (page) => {
                 <button
                   onClick={handleShowAll}
                   className={`w-full text-left px-4 py-3 rounded-lg mb-3 transition-colors duration-200 ${
-                    !selectedCategory 
+                    !selectedCategory && !hasSearched
                       ? 'bg-blue-600 text-white' 
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -552,6 +537,8 @@ const handlePageChange = (page) => {
             </div>
           </div>
         )}
+
+        
 
         <WhatsAppButton />
       </div>

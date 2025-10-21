@@ -1,4 +1,4 @@
-// hooks/useHorarios.js - Hook personalizado para gestión de horarios
+// hooks/useHorarios.js - VERSIÓN ACTUALIZADA
 import { useState, useEffect, useCallback, useRef } from 'react';
 import apiClient from '../config/api';
 
@@ -9,13 +9,14 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
   const intervalRef = useRef(null);
   const lastCheckRef = useRef(null);
 
-  // Función para verificar horarios
+  // Función para verificar horarios - 🆕 ACTUALIZADA PARA USAR NUEVO ENDPOINT
   const verificarHorario = useCallback(async (showLogs = false) => {
     try {
       if (showLogs && process.env.NEXT_PUBLIC_DEBUG === 'true') {
         console.log('🕐 Verificando horario de la tienda...');
       }
 
+      // 🆕 NUEVO ENDPOINT QUE USA EL SISTEMA AVANZADO
       const response = await apiClient.get('/store/horario');
       const data = response.data;
 
@@ -32,16 +33,15 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
       console.error('❌ Error verificando horario:', err);
       setError(err.message);
       
-      // Fallback en caso de error - asumir que está abierto
       const fallbackData = {
         estaAbierto: true,
         error: true,
         mensaje: 'Error al verificar horarios, se permite continuar',
         horarios: {
           apertura: '08:00',
-          cierre: '02:00',
+          cierre: '22:00',
           aperturaFormateada: '8:00 AM',
-          cierreFormateada: '2:00 AM'
+          cierreFormateada: '10:00 PM'
         }
       };
       
@@ -52,7 +52,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     }
   }, []);
 
-  // Función para obtener estado simple
   const verificarEstadoSimple = useCallback(async () => {
     try {
       const response = await apiClient.get('/store/horario/simple');
@@ -63,7 +62,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     }
   }, []);
 
-  // Función para formatear tiempo restante
   const formatearTiempoRestante = useCallback((minutos) => {
     if (minutos <= 0) return 'Ahora';
     
@@ -79,7 +77,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     }
   }, []);
 
-  // Función para obtener mensaje descriptivo
   const obtenerMensajeEstado = useCallback(() => {
     if (!horarioInfo) return 'Verificando horarios...';
     
@@ -87,37 +84,40 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
       return 'No se pudieron verificar los horarios, pero puedes continuar con tu pedido';
     }
 
-    const { estaAbierto, horarios, tiempos } = horarioInfo;
+    const { estaAbierto, razon, mensaje, horarios, proximaApertura } = horarioInfo;
     
     if (estaAbierto) {
-      if (tiempos.minutosParaCerrar <= 30) {
-        return `🟡 Cerramos en ${formatearTiempoRestante(tiempos.minutosParaCerrar)}`;
+      if (razon === 'Horario especial') {
+        return `🟡 ${mensaje}`;
       }
-      return `🟢 Estamos abiertos hasta las ${horarios.cierreFormateada}`;
+      return `🟢 Estamos abiertos${horarios?.cierre ? ` hasta las ${horarios.cierre}` : ''}`;
     } else {
-      return `🔴 Estamos cerrados. Abrimos a las ${horarios.aperturaFormateada}`;
+      if (razon === 'Excepción de horario') {
+        return `🔴 ${mensaje}`;
+      }
+      if (proximaApertura) {
+        return `🔴 Cerrado. Abrimos a las ${proximaApertura}`;
+      }
+      return `🔴 ${mensaje}`;
     }
-  }, [horarioInfo, formatearTiempoRestante]);
+  }, [horarioInfo]);
 
-  // Función para obtener mensaje de pedido fuera de horario
   const obtenerMensajePedidoFueraHorario = useCallback(() => {
     if (!horarioInfo || horarioInfo.estaAbierto) return null;
 
-    const { horarios } = horarioInfo;
+    const { razon, mensaje, horarios } = horarioInfo;
     
     return {
-      titulo: 'Local Cerrado',
-      mensaje: `Nuestro local se encuentra cerrado en este momento. Tu pedido será registrado y preparado cuando volvamos a abrir.`,
-      horarios: `Horarios de atención: ${horarios.aperturaFormateada} a ${horarios.cierreFormateada}`,
-      proximaApertura: horarioInfo.tiempos ? 
-        `Abrimos en: ${formatearTiempoRestante(horarioInfo.tiempos.minutosParaAbrir)}` : 
-        ''
+      titulo: razon === 'Excepción de horario' ? 'Día Especial' : 'Local Cerrado',
+      mensaje: mensaje || 'Nuestro local se encuentra cerrado en este momento.',
+      horarios: horarios ? 
+        `Horario: ${horarios.apertura || 'N/A'} a ${horarios.cierre || 'N/A'}` : 
+        '',
+      info: 'Tu pedido será registrado y preparado cuando volvamos a abrir.'
     };
-  }, [horarioInfo, formatearTiempoRestante]);
+  }, [horarioInfo]);
 
-  // Configurar auto-refresh
   useEffect(() => {
-    // Verificación inicial
     verificarHorario(true);
 
     if (autoRefresh && intervalMinutes > 0) {
@@ -133,7 +133,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     }
   }, [verificarHorario, autoRefresh, intervalMinutes]);
 
-  // Cleanup al desmontar
   useEffect(() => {
     return () => {
       if (intervalRef.current) {
@@ -142,7 +141,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     };
   }, []);
 
-  // Función para pausar auto-refresh temporalmente
   const pausarAutoRefresh = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -150,7 +148,6 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
     }
   }, []);
 
-  // Función para reanudar auto-refresh
   const reanudarAutoRefresh = useCallback(() => {
     if (autoRefresh && intervalMinutes > 0 && !intervalRef.current) {
       intervalRef.current = setInterval(() => {
@@ -160,36 +157,24 @@ export const useHorarios = (autoRefresh = true, intervalMinutes = 5) => {
   }, [autoRefresh, intervalMinutes, verificarHorario]);
 
   return {
-    // Estados principales
     horarioInfo,
     loading,
     error,
-    
-    // Estado calculado
     estaAbierto: horarioInfo?.estaAbierto || false,
     estaCerrado: horarioInfo ? !horarioInfo.estaAbierto : false,
-    
-    // Funciones de verificación
     verificarHorario,
     verificarEstadoSimple,
-    
-    // Funciones de formateo y mensajes
     formatearTiempoRestante,
     obtenerMensajeEstado,
     obtenerMensajePedidoFueraHorario,
-    
-    // Control de auto-refresh
     pausarAutoRefresh,
     reanudarAutoRefresh,
-    
-    // Información adicional
     ultimaVerificacion: lastCheckRef.current,
-    tiempoParaCerrar: horarioInfo?.tiempos?.minutosParaCerrar || null,
-    tiempoParaAbrir: horarioInfo?.tiempos?.minutosParaAbrir || null
+    razon: horarioInfo?.razon,
+    mensaje: horarioInfo?.mensaje
   };
 };
 
-// Hook simplificado para casos básicos
 export const useEstadoTienda = () => {
   const [estaAbierto, setEstaAbierto] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -201,7 +186,7 @@ export const useEstadoTienda = () => {
         setEstaAbierto(response.data.estaAbierto);
       } catch (error) {
         console.error('Error verificando estado de tienda:', error);
-        setEstaAbierto(true); // Fallback
+        setEstaAbierto(true);
       } finally {
         setLoading(false);
       }
