@@ -231,41 +231,33 @@ function CardsMovil({
 const Checkout = ({ onAddToCart }) => {
   const { items, totalPrice, dispatch } = useCart();
   const { config } = useConfig();
-  const { products: relatedProducts, loading: loadingRelated, error: errorRelated } = useRelatedProducts(items);
+  const { products: relatedProducts, loading: loadingRelated } = useRelatedProducts(items);
   
-  // 🆕 NUEVO - Hook para verificar horarios
+  // Hook para verificar horarios
   const { 
     horarioInfo, 
     loading: loadingHorarios, 
-    estaAbierto, 
-    obtenerMensajePedidoFueraHorario 
-  } = useHorarios(true, 2); // Auto-refresh cada 2 minutos
+    estaAbierto,
+    estaBloqueado,
+    pageStatus,
+    obtenerTipoBloqueo,
+    obtenerMensajePedidoFueraHorario
+  } = useHorarios(true, 2);
 
-  // Estados para el modal y confirmación de horarios
+  // Estados
   const [showHorariosModal, setShowHorariosModal] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [horariosConfirmados, setHorariosConfirmados] = useState(false);
   const [showLiquidacionModal, setShowLiquidacionModal] = useState(false);
 
-  // 🆕 NUEVO - Efecto para mostrar modal cuando está cerrado
+  // 🆕 Efecto para detectar estado bloqueado (INACTIVA)
   useEffect(() => {
-    // Solo mostrar el modal si:
-    // 1. Ya terminó de cargar los horarios
-    // 2. La tienda está cerrada
-    // 3. Hay items en el carrito
-    // 4. No se ha confirmado previamente
-    if (!loadingHorarios && !estaAbierto && items.length > 0 && !horariosConfirmados) {
+    if (!loadingHorarios && estaBloqueado && items.length > 0) {
+      // Si está INACTIVA, mostrar modal inmediatamente
       setShowHorariosModal(true);
     }
-  }, [loadingHorarios, estaAbierto, items.length, horariosConfirmados]);
-
-  // Debug mejorado
-  useEffect(() => {
-    console.log('🛒 Items del carrito enviados al backend:', items);
-    console.log('🔗 Productos relacionados recibidos:', relatedProducts);
-    console.log('📊 Cantidad:', relatedProducts?.length || 0);
-  }, [items, relatedProducts]);
+  }, [loadingHorarios, estaBloqueado, items.length]);
 
   const handleQuantityChange = (id, newQuantity) => {
     if (newQuantity <= 0) {
@@ -307,10 +299,15 @@ const Checkout = ({ onAddToCart }) => {
     setItemToDelete(null);
   };
 
-  // 🆕 NUEVO - Manejar confirmación de horarios
+  
+  // 🆕 FUNCIÓN ACTUALIZADA: Manejar confirmación de horarios
   const handleConfirmarHorarios = () => {
     setHorariosConfirmados(true);
     setShowHorariosModal(false);
+    
+    // Continuar al modal de liquidación
+    setShowLiquidacionModal(true);
+    
     toast.success('Entendido. Tu pedido será procesado cuando abramos.', {
       duration: 3000,
       icon: '✅'
@@ -320,13 +317,21 @@ const Checkout = ({ onAddToCart }) => {
     const handleProcederPago = () => {
     if (items.length === 0) return;
 
-    // Si está cerrado y no se ha confirmado, mostrar modal de horarios primero
-    if (!estaAbierto && !horariosConfirmados) {
+    const bloqueo = obtenerTipoBloqueo();
+
+    // CASO 1: Tienda INACTIVA → Bloqueo total, mostrar modal SIN botón continuar
+    if (bloqueo?.tipo === 'INACTIVO') {
       setShowHorariosModal(true);
       return;
     }
 
-    // 🆕 NUEVO: Mostrar modal de liquidación ANTES de ir al pago
+    // CASO 2: Tienda CERRADA por horarios → Mostrar modal CON botón continuar
+    if (bloqueo?.tipo === 'CERRADO' && !horariosConfirmados) {
+      setShowHorariosModal(true);
+      return;
+    }
+
+    // CASO 3: Está ABIERTA o ya confirmó horarios → Modal de liquidación
     setShowLiquidacionModal(true);
   };
 
@@ -421,8 +426,28 @@ const Checkout = ({ onAddToCart }) => {
                     </div>
                   </div>
 
-                  {/* 🆕 NUEVO - Aviso si está cerrado */}
-                  {!loadingHorarios && !estaAbierto && items.length > 0 && (
+                  
+                  {!loadingHorarios && items.length > 0 && (
+                <>
+                  {/* Si está INACTIVA */}
+                  {estaBloqueado && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <span className="text-red-600 mt-0.5">🚫</span>
+                        <div>
+                          <p className="text-sm font-medium text-red-800">
+                            Tienda inactiva
+                          </p>
+                          <p className="text-xs text-red-700 mt-1">
+                            No es posible realizar pedidos
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Si está CERRADA por horarios */}
+                  {!estaBloqueado && !estaAbierto && (
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <div className="flex items-start gap-2">
                         <span className="text-yellow-600 mt-0.5">⚠️</span>
@@ -437,15 +462,17 @@ const Checkout = ({ onAddToCart }) => {
                       </div>
                     </div>
                   )}
+                </>
+              )}
                 </div>
 
                 {/* Acciones */}
-                <div className="p-4 sm:p-6 space-y-3">
+                <div className="p-4 sm:p-6 border-t border-gray-200 bg-gray-50 space-y-3">
                   <button
                     onClick={handleProcederPago}
-                    disabled={items.length === 0}
+                    disabled={items.length === 0 || (estaBloqueado && !horariosConfirmados)}
                     className={`block w-full text-center py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
-                      items.length === 0 
+                      items.length === 0 || estaBloqueado
                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
                         : estaAbierto
                         ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
@@ -454,6 +481,8 @@ const Checkout = ({ onAddToCart }) => {
                   >
                     {items.length === 0 
                       ? 'Carrito vacío' 
+                      : estaBloqueado
+                      ? 'Tienda inactiva'
                       : estaAbierto 
                       ? 'Proceder al pago'
                       : 'Continuar pedido (cerrado)'
@@ -507,7 +536,7 @@ const Checkout = ({ onAddToCart }) => {
           onClose={() => setShowHorariosModal(false)}
           onContinuar={handleConfirmarHorarios}
           mensajeInfo={obtenerMensajePedidoFueraHorario()}
-          showContinueButton={true}
+          showContinueButton={!estaBloqueado} // ← Solo si NO está bloqueado
         />
 
         {/* Modal de confirmación de eliminación (sin cambios) */}
