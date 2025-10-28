@@ -72,17 +72,34 @@ export const useInstantSearch = () => {
       setLoading(true);
       setHasSearched(true);
       setShowSuggestions(false); // 🆕 Cerrar dropdown al hacer búsqueda completa
-      
+
       const encodedTerm = encodeURIComponent(term.trim());
+      console.log(`🔍 [FRONTEND] Ejecutando búsqueda completa:`, {
+        term: term,
+        trimmed: term.trim(),
+        encoded: encodedTerm,
+        url: `/store/buscar/${encodedTerm}/${page}/30`,
+        page
+      });
+
       const response = await apiClient.get(
         `/store/buscar/${encodedTerm}/${page}/30`
       );
 
+      console.log(`✅ [FRONTEND] Respuesta de búsqueda:`, {
+        resultados: response.data?.data?.length || 0,
+        totalItems: response.data?.pagination?.totalItems || 0
+      });
+
       setResults(response.data?.data || []);
       setPagination(response.data?.pagination || null);
-      
+
     } catch (error) {
-      console.error('Error in full search:', error);
+      console.error('❌ [FRONTEND] Error in full search:', {
+        term,
+        error: error.message,
+        response: error.response?.data
+      });
       setResults([]);
       setPagination(null);
     } finally {
@@ -133,10 +150,26 @@ export const useInstantSearch = () => {
   // 🆕 Función mejorada para seleccionar sugerencia
   const handleSelectSuggestion = (product) => {
     isSelectingRef.current = true; // Marcar que se está seleccionando
-    setSearchTerm(product.art_desc_vta);
+
+    // SOLUCIÓN: Buscar por código de barras (único) en lugar de nombre
+    const searchKey = product.CODIGO_BARRA || product.COD_INTERNO || product.art_desc_vta?.trim();
+    const displayName = product.art_desc_vta?.trim() || '';
+
+    console.log(`🎯 [FRONTEND] Sugerencia seleccionada:`, {
+      displayName,
+      searchKey,
+      CODIGO_BARRA: product.CODIGO_BARRA,
+      COD_INTERNO: product.COD_INTERNO,
+      PRECIO: product.PRECIO
+    });
+
+    // Mostrar el nombre en el input para UX
+    setSearchTerm(displayName);
     setShowSuggestions(false);
-    setSuggestions([]); // 🆕 Limpiar sugerencias
-    executeFullSearch(product.art_desc_vta);
+    setSuggestions([]);
+
+    // CRÍTICO: Buscar por código de barras para garantizar resultado único
+    executeFullSearch(searchKey);
   };
 
   const clearSearch = () => {

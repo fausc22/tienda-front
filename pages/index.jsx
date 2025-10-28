@@ -31,7 +31,7 @@ const Home = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `INICIO - ${config.storeName}` : 'INICIO - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
         <meta name="description" content={config?.storeDescription || 'Tienda online'} />
       </Head>
 

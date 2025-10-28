@@ -243,7 +243,7 @@ const Products = () => {
     <>
       <Head>
         <title>{config?.storeName ? `PRODUCTOS - ${config.storeName}` : 'PRODUCTOS - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
         <meta name="description" content="Explora nuestro catálogo de productos" />
       </Head>
 

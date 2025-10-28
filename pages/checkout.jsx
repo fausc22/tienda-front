@@ -351,7 +351,7 @@ const Checkout = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `CARRITO - ${config.storeName}` : 'CARRITO - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
         <meta name="description" content="Revisa tu carrito de compras" />
       </Head>
 

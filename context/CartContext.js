@@ -68,22 +68,58 @@ export const CartProvider = ({ children }) => {
 
   // Cargar carrito desde localStorage AL INICIO
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    if (savedCart) {
-      try {
+    try {
+      const savedCart = localStorage.getItem('cart');
+      if (savedCart && savedCart !== 'undefined' && savedCart !== 'null') {
         const cartData = JSON.parse(savedCart);
-        dispatch({ type: 'LOAD_CART', payload: cartData });
-      } catch (error) {
-        console.error('Error loading cart from localStorage:', error);
+
+        // Validar que sea un array válido
+        if (Array.isArray(cartData)) {
+          // Validar cada item del carrito
+          const validatedCart = cartData.filter(item => {
+            return item &&
+                   typeof item.name === 'string' &&
+                   typeof item.price === 'number' &&
+                   typeof item.quantity === 'number' &&
+                   item.quantity > 0 &&
+                   item.price >= 0;
+          });
+
+          console.log(`🛒 Carrito cargado desde localStorage: ${validatedCart.length} items`);
+          dispatch({ type: 'LOAD_CART', payload: validatedCart });
+        } else {
+          console.warn('⚠️ Carrito en localStorage no es un array válido, limpiando');
+          localStorage.removeItem('cart');
+        }
       }
+    } catch (error) {
+      console.error('❌ Error cargando carrito desde localStorage:', error);
+      // Limpiar localStorage corrupto
+      localStorage.removeItem('cart');
+    } finally {
+      setIsLoaded(true);
     }
-    setIsLoaded(true);
   }, []);
 
   // Guardar carrito en localStorage cuando cambie - SOLO después de cargar
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('cart', JSON.stringify(state.items));
+      try {
+        const cartString = JSON.stringify(state.items);
+        localStorage.setItem('cart', cartString);
+        console.log(`💾 Carrito guardado: ${state.items.length} items`);
+      } catch (error) {
+        console.error('❌ Error guardando carrito en localStorage:', error);
+        // Si falla (quota exceeded), intentar limpiar y guardar versión mínima
+        try {
+          const minimalCart = state.items.map(({ id, name, quantity, price, cod_interno }) => ({
+            id, name, quantity, price, cod_interno
+          }));
+          localStorage.setItem('cart', JSON.stringify(minimalCart));
+        } catch (retryError) {
+          console.error('❌ Error en retry de guardado:', retryError);
+        }
+      }
     }
   }, [state.items, isLoaded]);
 

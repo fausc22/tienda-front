@@ -5,19 +5,16 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "build:static": "cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
-    "build:prod": "cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
+    "build:prod": "npm run clean:win && cross-env NODE_ENV=production NEXT_PUBLIC_BUILD_ENV=production next build",
     "build:analyze": "cross-env ANALYZE=true NODE_ENV=production next build",
     "start": "next start",
     "lint": "next lint",
     "clean": "rimraf .next out",
     "clean:win": "if exist .next rmdir /s /q .next && if exist out rmdir /s /q out",
     "serve": "npx serve out -p 3000",
-    "serve:tienda": "npx serve out/tienda -p 3000",
-    "check-build": "ls -la out/",
-    "check-build:win": "if exist out (dir out)",
-    "export": "npm run build:static",
-    "deploy": "npm run clean && npm run build:static && npm run check-build"
+    "check-build:win": "if exist out (dir out /s)",
+    "deploy:prod": "npm run build:prod && npm run check-build:win",
+    "prebuild:prod": "echo Building tienda-front for production..."
   },
   "dependencies": {
     "@heroui/button": "^2.2.19",
@@ -28,6 +25,7 @@
     "axios": "^1.9.0",
     "framer-motion": "^12.9.7",
     "install": "^0.13.0",
+    "lucide-react": "^0.546.0",
     "next": "^15.3.4",
     "npm": "^11.4.2",
     "primereact": "^10.9.5",

@@ -66,7 +66,7 @@ const PagoRechazado = () => {
     <>
       <Head>
         <title>PAGO NO PROCESADO - {config?.storeName || 'TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
         <meta name="description" content="Problema con el procesamiento del pago" />
       </Head>
 

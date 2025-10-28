@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts';
+
 
 const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
   const [quantity, setQuantity] = useState(0);
@@ -31,8 +32,8 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
         name,
         price: numericPrice,
         imageUrl,
-        cod_interno: cod_interno, // ✅ Asegurar que siempre tenga un valor
-        codigo_barra: imageUrl, // ✅ AGREGAR para tener referencia
+        cod_interno: cod_interno,
+        codigo_barra: imageUrl,
         quantity
       }
     });
@@ -54,8 +55,8 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 p-2 sm:p-3 md:p-4 flex flex-col h-full group">
       
-      {/* Contenedor de imagen */}
-      <div className="w-full h-24 sm:h-28 md:h-32 lg:h-36 mb-2 sm:mb-3 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative">
+      {/* Contenedor de imagen - Altura reducida y fija */}
+      <div className="w-full h-20 sm:h-24 md:h-28 lg:h-32 mb-2 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
         <img
           src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl}.png`}
           alt={name}
@@ -67,15 +68,20 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
       </div>
 
       {/* Información del producto */}
-      <div className="flex flex-col flex-grow space-y-1 sm:space-y-2">
+      <div className="flex flex-col flex-grow space-y-1.5 sm:space-y-2">
         
-        {/* Nombre del producto */}
-        <h3 className="text-xs sm:text-sm md:text-base font-medium text-gray-800 dark:text-white line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem]">
-          {name}
-        </h3>
+        {/* Nombre del producto - Con altura mínima y máxima, texto completo visible */}
+        <div className="min-h-[2.5rem] sm:min-h-[3rem] max-h-[4.5rem] sm:max-h-[5rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          <h3 
+            className="text-xs sm:text-sm md:text-base font-medium text-gray-800 dark:text-white leading-snug break-words pr-1"
+            title={name} // Tooltip nativo del navegador
+          >
+            {name}
+          </h3>
+        </div>
 
         {/* Precios */}
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-0.5 flex-shrink-0">
           {formattedOriginalPrice && (
             <span className="text-xs text-red-500 line-through">
               ${formattedOriginalPrice}
@@ -87,7 +93,7 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
         </div>
 
         {/* Controles de cantidad */}
-        <div className="flex items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2 flex-shrink-0">
           <Button
             isIconOnly
             size="sm"
@@ -116,15 +122,15 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
 
         {/* Total */}
         {quantity > 0 && (
-          <div className="text-center py-0.5 sm:py-1">
+          <div className="text-center py-0.5 sm:py-1 flex-shrink-0">
             <p className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
               Total: ${total.toFixed(2)}
             </p>
           </div>
         )}
 
-        {/* Botón agregar */}
-        <div className="mt-auto pt-1 sm:pt-2">
+        {/* Botón agregar - Siempre al final */}
+        <div className="mt-auto pt-1 sm:pt-2 flex-shrink-0">
           <Button
             fullWidth
             color="primary"
@@ -138,6 +144,23 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
           </Button>
         </div>
       </div>
+
+      {/* Estilos para scrollbar personalizado (opcional) */}
+      <style jsx>{`
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 2px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+      `}</style>
     </div>
   );
 };

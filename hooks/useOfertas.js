@@ -21,34 +21,31 @@ export const useOfertas = () => {
       
       if (response.data && Array.isArray(response.data)) {
         // Transformar datos para el componente CardProductOferta
-        const ofertasFormateadas = response.data.map(item => ({
-          // Datos básicos del producto
-          name: item.art_desc_vta,
-          codigoBarra: item.CODIGO_BARRA,
-          
-          // Precios - IMPORTANTE: usar los campos correctos
-          originalPrice: parseFloat(item.PRECIO) || 0,     // Precio original
-          offerPrice: parseFloat(item.PRECIO_DESC) || 0,   // Precio de oferta
-          
-          // Imagen usando código de barra
-          imageUrl: item.CODIGO_BARRA,
-          
-          // Información adicional
-          stock: parseInt(item.STOCK) || 0,
-          pesable: item.PESABLE === 'S',
-          cod_interno: item.COD_INTERNO,
-          
-          // Calcular descuento
-          discountPercentage: item.PRECIO && item.PRECIO_DESC 
-            ? Math.round(((item.PRECIO - item.PRECIO_DESC) / item.PRECIO) * 100)
-            : 0
-        }));
+        const ofertasFormateadas = response.data.map(item => {
+  const precioOriginal = parseFloat(item.PRECIO) || 0;
+  const precioOferta = parseFloat(item.PRECIO_DESC) || 0;
+  
+  return {
+    name: item.art_desc_vta,
+    codigoBarra: item.CODIGO_BARRA,
+    originalPrice: precioOriginal,
+    offerPrice: precioOferta,
+    imageUrl: item.CODIGO_BARRA,
+    stock: parseInt(item.STOCK) || 0,
+    pesable: item.PESABLE === 'S',
+    cod_interno: item.COD_INTERNO,
+    
+    // ✅ Calcular descuento solo si hay diferencia
+    discountPercentage: precioOriginal > precioOferta && precioOriginal > 0
+      ? Math.round(((precioOriginal - precioOferta) / precioOriginal) * 100)
+      : 0
+  };
+});
 
-        // Filtrar ofertas válidas (que tengan descuento real)
-        const ofertasValidas = ofertasFormateadas.filter(oferta => 
-          oferta.offerPrice > 0 && 
-          oferta.originalPrice > oferta.offerPrice
-        );
+// ✅ Mostrar todas las ofertas activas
+const ofertasValidas = ofertasFormateadas.filter(oferta => 
+  oferta.offerPrice > 0
+);
 
         setOfertas(ofertasValidas);
 

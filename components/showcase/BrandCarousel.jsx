@@ -1,85 +1,91 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import { IoChevronBack, IoChevronForward, IoPlayCircle, IoPauseCircle } from 'react-icons/io5';
 import apiClient, { getApiBaseURL } from '../../config/api';
 
 const BrandCarousel = () => {
-  const [images, setImages] = useState([]);
+  const [media, setMedia] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
   const intervalRef = useRef(null);
+  const videoRef = useRef(null);
 
-  // Configuración del carrusel
-  const AUTOPLAY_INTERVAL = 5000; // 5 segundos
-  const TOUCH_MIN_SWIPE_DISTANCE = 50;
+  const AUTOPLAY_INTERVAL_IMAGES = 5000; // 5 segundos para imágenes
+
+  // ✅ Función para detectar si es video
+  const esVideo = (url) => {
+    return /\.(mp4|webm|mov)$/i.test(url);
+  };
 
   useEffect(() => {
-    const fetchBrandImages = async () => {
+    const fetchMedia = async () => {
       try {
         if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-          console.log('🎨 BrandCarousel: Cargando imágenes destacadas...');
+          console.log('🎨 BrandCarousel: Cargando media destacado...');
         }
 
-        // Cambio de endpoint para evitar AdBlock
         const response = await apiClient.get('/store/getShowcase');
         
         if (response.data && response.data.length > 0) {
-          // Si usas middleware estático, las URLs ya vienen completas desde el backend
-          const imageUrls = response.data.map(url => `${getApiBaseURL()}${url}`);
-          setImages(imageUrls);
+          const mediaUrls = response.data.map(url => {
+            const tipoDetectado = esVideo(url) ? 'video' : 'imagen';
+            
+            return {
+              url: `${getApiBaseURL()}${url}`,
+              tipo: tipoDetectado
+            };
+          });
+          
+          setMedia(mediaUrls);
 
           if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-            console.log('✅ BrandCarousel: Imágenes cargadas:', imageUrls);
+            console.log('✅ BrandCarousel: Media cargado:', mediaUrls);
           }
         } else {
-          // Fallback con imágenes de demostración
-          const demoImages = [
-            'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop&q=80',
-            'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=1200&h=400&fit=crop&q=80'
-          ];
-          setImages(demoImages);
+          console.warn('⚠️ No hay media en la respuesta');
+          setMedia([]);
         }
         
       } catch (error) {
-        console.error('❌ BrandCarousel: Error al cargar imágenes:', error);
-        
-        // Fallback images
-        const fallbackImages = [
-          'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop&q=80'
-        ];
-        setImages(fallbackImages);
+        console.error('❌ BrandCarousel: Error al cargar media:', error);
+        setMedia([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchBrandImages();
+    fetchMedia();
   }, []);
 
-  // Control de autoplay mejorado
+  // ✅ NUEVO: Control de autoplay que respeta la duración de videos
   const startAutoplay = useCallback(() => {
-    if (images.length <= 1) return;
+    if (media.length <= 1) return;
     
+    // Limpiar cualquier intervalo previo
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
     
+    const currentMedia = media[currentIndex];
+    
+    // Si es un video, NO iniciar timer automático
+    // El video manejará su propia transición con onEnded
+    if (currentMedia?.tipo === 'video') {
+      console.log('🎬 Video actual, esperando a que termine...');
+      return;
+    }
+    
+    // Si es imagen, usar timer normal
+    console.log(`🖼️ Imagen actual, timer: ${AUTOPLAY_INTERVAL_IMAGES}ms`);
     intervalRef.current = setInterval(() => {
-      setCurrentIndex((prevIndex) => {
-        const nextIndex = prevIndex >= images.length - 1 ? 0 : prevIndex + 1;
-        
-        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-          console.log(`🎠 Autoplay: ${prevIndex} → ${nextIndex} (total: ${images.length})`);
-        }
-        
-        return nextIndex;
-      });
-    }, AUTOPLAY_INTERVAL);
-  }, [images.length]);
+      goToNext();
+    }, AUTOPLAY_INTERVAL_IMAGES);
+    
+  }, [media, currentIndex]);
 
   const stopAutoplay = useCallback(() => {
     if (intervalRef.current) {
@@ -88,70 +94,90 @@ const BrandCarousel = () => {
     }
   }, []);
 
-  // Manejar autoplay - Con cleanup mejorado
+  // ✅ MEJORADO: Cuando un video termina, avanza automáticamente
+  const handleVideoEnded = () => {
+    console.log('🎬 Video terminado, avanzando automáticamente...');
+    goToNext();
+  };
+
+  // Pausar/reproducir video manualmente
+  const toggleVideoPlayback = () => {
+    if (videoRef.current) {
+      if (isVideoPlaying) {
+        videoRef.current.pause();
+        setIsVideoPlaying(false);
+      } else {
+        videoRef.current.play();
+        setIsVideoPlaying(true);
+      }
+    }
+  };
+
+  // ✅ MEJORADO: Gestión inteligente del autoplay
   useEffect(() => {
-    if (images.length > 1) {
-      // Pequeño delay para evitar conflictos
+    if (media.length <= 1) {
+      stopAutoplay();
+      return;
+    }
+
+    const currentMedia = media[currentIndex];
+    
+    if (currentMedia?.tipo === 'video') {
+      // Para videos: detener timer y dejar que el video maneje su reproducción
+      stopAutoplay();
+      
+      // Intentar reproducir el video
+      if (videoRef.current) {
+        videoRef.current.play()
+          .then(() => {
+            console.log('▶️ Video reproduciéndose');
+            setIsVideoPlaying(true);
+          })
+          .catch(err => {
+            console.warn('⚠️ No se pudo reproducir automáticamente:', err);
+            setIsVideoPlaying(false);
+          });
+      }
+    } else {
+      // Para imágenes: iniciar timer con delay pequeño
       const timeoutId = setTimeout(() => {
         startAutoplay();
       }, 100);
       
-      return () => {
-        clearTimeout(timeoutId);
-        stopAutoplay();
-      };
-    } else {
-      stopAutoplay();
+      return () => clearTimeout(timeoutId);
     }
-  }, [images.length, startAutoplay, stopAutoplay]);
+  }, [currentIndex, media, startAutoplay, stopAutoplay]);
 
-  // Cleanup cuando el componente se desmonte
+  // Cleanup al desmontar
   useEffect(() => {
     return () => {
       stopAutoplay();
     };
   }, [stopAutoplay]);
 
-  // Navegación mejorada
   const goToSlide = (index) => {
-    if (index >= 0 && index < images.length) {
+    if (index >= 0 && index < media.length) {
+      stopAutoplay();
       setCurrentIndex(index);
-      // Reiniciar autoplay después de navegación manual
-      if (images.length > 1) {
-        setTimeout(() => {
-          startAutoplay();
-        }, 100);
-      }
     }
   };
 
   const goToPrevious = () => {
-    const newIndex = currentIndex === 0 ? images.length - 1 : currentIndex - 1;
+    stopAutoplay();
+    const newIndex = currentIndex === 0 ? media.length - 1 : currentIndex - 1;
     setCurrentIndex(newIndex);
-    // Reiniciar autoplay
-    if (images.length > 1) {
-      setTimeout(() => {
-        startAutoplay();
-      }, 100);
-    }
   };
 
   const goToNext = () => {
-    const newIndex = currentIndex === images.length - 1 ? 0 : currentIndex + 1;
+    stopAutoplay();
+    const newIndex = currentIndex === media.length - 1 ? 0 : currentIndex + 1;
     setCurrentIndex(newIndex);
-    // Reiniciar autoplay
-    if (images.length > 1) {
-      setTimeout(() => {
-        startAutoplay();
-      }, 100);
-    }
   };
 
-  // Touch handlers para swipe - Con reinicio de autoplay
+  // Touch handlers
   const onTouchStart = (e) => {
     setTouchEnd(null);
     setTouchStart(e.targetTouches[0].clientX);
-    // Pausar autoplay durante swipe
     stopAutoplay();
   };
 
@@ -160,31 +186,15 @@ const BrandCarousel = () => {
   };
 
   const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) {
-      // Reiniciar autoplay si no hubo swipe
-      if (images.length > 1) {
-        setTimeout(() => {
-          startAutoplay();
-        }, 100);
-      }
-      return;
-    }
+    if (!touchStart || !touchEnd) return;
     
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > TOUCH_MIN_SWIPE_DISTANCE;
-    const isRightSwipe = distance < -TOUCH_MIN_SWIPE_DISTANCE;
-
-    if (isLeftSwipe) {
+    const TOUCH_MIN_SWIPE_DISTANCE = 50;
+    
+    if (distance > TOUCH_MIN_SWIPE_DISTANCE) {
       goToNext();
-    } else if (isRightSwipe) {
+    } else if (distance < -TOUCH_MIN_SWIPE_DISTANCE) {
       goToPrevious();
-    } else {
-      // No fue un swipe válido, reiniciar autoplay
-      if (images.length > 1) {
-        setTimeout(() => {
-          startAutoplay();
-        }, 100);
-      }
     }
   };
 
@@ -203,9 +213,11 @@ const BrandCarousel = () => {
     );
   }
 
-  if (images.length === 0) {
+  if (media.length === 0) {
     return null;
   }
+
+  const currentMedia = media[currentIndex];
 
   return (
     <section className="py-6 sm:py-8 md:py-12 px-4 sm:px-6 md:px-8">
@@ -217,7 +229,7 @@ const BrandCarousel = () => {
           onTouchEnd={onTouchEnd}
         >
           
-          {/* Contenedor principal de imágenes */}
+          {/* Contenedor principal de media */}
           <div className="relative h-48 sm:h-64 md:h-80 lg:h-96 bg-gradient-to-br from-blue-50 to-gray-100">
             <AnimatePresence mode="wait">
               <motion.div
@@ -228,57 +240,62 @@ const BrandCarousel = () => {
                 transition={{ duration: 0.6, ease: "easeInOut" }}
                 className="absolute inset-0"
               >
-                <img
-                  src={images[currentIndex]}
-                  alt={`Imagen destacada ${currentIndex + 1}`}
-                  className="w-full h-full"
-                  style={{
-                    // Para móviles y tablets - asegurar que la imagen llene el espacio
-                    objectFit: 'cover',
-                    objectPosition: 'center center',
-                    // Forzar que siempre llene el contenedor
-                    minWidth: '100%',
-                    minHeight: '100%',
-                    // En caso de imágenes muy anchas o altas, aplicar límites
-                    maxWidth: '100%',
-                    maxHeight: '100%'
-                  }}
-                  loading="lazy"
-                  onLoad={(e) => {
-                    // Opcional: ajuste dinámico basado en la relación de aspecto
-                    const img = e.target;
-                    const containerAspectRatio = img.parentElement.offsetWidth / img.parentElement.offsetHeight;
-                    const imgAspectRatio = img.naturalWidth / img.naturalHeight;
-                    
-                    if (imgAspectRatio > containerAspectRatio) {
-                      // Imagen más ancha que el contenedor
-                      img.style.objectFit = 'cover';
-                      img.style.objectPosition = 'center center';
-                    } else {
-                      // Imagen más alta que el contenedor
-                      img.style.objectFit = 'cover';
-                      img.style.objectPosition = 'center top';
-                    }
-                  }}
+                {currentMedia.tipo === 'video' ? (
+                  <video
+                  ref={videoRef}
+                  src={currentMedia.url}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  playsInline
+                  preload="auto"  // ← AGREGAR ESTO
+                  onEnded={handleVideoEnded}
                   onError={(e) => {
-                    e.target.style.display = 'none';
-                    console.error('❌ BrandCarousel: Error loading image:', e.target.src);
+                    console.error('❌ Error loading video:', currentMedia.url);
+                    console.error('❌ Error event:', e);  // ← AGREGAR ESTO
                   }}
+  
                 />
+                ) : (
+                  <img
+                    src={currentMedia.url}
+                    alt={`Contenido destacado ${currentIndex + 1}`}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      console.error('❌ Error loading image:', e.target.src);
+                    }}
+                  />
+                )}
                 
-                {/* Overlay sutil */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent pointer-events-none" />
               </motion.div>
             </AnimatePresence>
+
+            {/* Botón de play/pause para videos */}
+            {currentMedia.tipo === 'video' && (
+              <button
+                onClick={toggleVideoPlayback}
+                className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white hover:scale-110 transition-all duration-300 shadow-lg z-10"
+                aria-label={isVideoPlaying ? "Pausar video" : "Reproducir video"}
+              >
+                {isVideoPlaying ? (
+                  <IoPauseCircle className="w-6 h-6" />
+                ) : (
+                  <IoPlayCircle className="w-6 h-6" />
+                )}
+              </button>
+            )}
           </div>
 
-          {/* Controles de navegación - Solo flechas */}
-          {images.length > 1 && (
+          {/* Controles de navegación */}
+          {media.length > 1 && (
             <>
               <button
                 onClick={goToPrevious}
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white hover:scale-110 transition-all duration-300 shadow-lg opacity-80 hover:opacity-100"
-                aria-label="Imagen anterior"
+                aria-label="Anterior"
               >
                 <IoChevronBack className="w-5 h-5" />
               </button>
@@ -286,26 +303,27 @@ const BrandCarousel = () => {
               <button
                 onClick={goToNext}
                 className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 backdrop-blur-sm text-gray-800 p-3 rounded-full hover:bg-white hover:scale-110 transition-all duration-300 shadow-lg opacity-80 hover:opacity-100"
-                aria-label="Imagen siguiente"
+                aria-label="Siguiente"
               >
                 <IoChevronForward className="w-5 h-5" />
               </button>
             </>
           )}
 
-          {/* Indicadores de posición - Solo puntos */}
-          {images.length > 1 && (
+          {/* Indicadores de posición */}
+          {media.length > 1 && (
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-              {images.map((_, index) => (
+              {media.map((item, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-300 ${
+                  className={`transition-all duration-300 rounded-full ${
                     index === currentIndex
-                      ? 'bg-white scale-125 shadow-lg'
-                      : 'bg-white/50 hover:bg-white/75'
+                      ? 'bg-white scale-125 shadow-lg w-3 h-3 sm:w-4 sm:h-4'
+                      : 'bg-white/50 hover:bg-white/75 w-2 h-2 sm:w-3 sm:h-3'
                   }`}
-                  aria-label={`Ir a imagen ${index + 1}`}
+                  aria-label={`Ir a ${item.tipo} ${index + 1}`}
+                  title={item.tipo === 'video' ? '📹 Video' : '🖼️ Imagen'}
                 />
               ))}
             </div>

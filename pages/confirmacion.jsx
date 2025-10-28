@@ -139,25 +139,53 @@ const Confirmation = () => {
     }, 100);
   };
 
-  const insertarPedidoBaseDatos = async (pedido) => {
-    const response = await longApiClient.post('/store/NuevoPedido', {
-      cliente: pedido.cliente,
-      direccion_cliente: pedido.direccion_cliente,
-      telefono_cliente: pedido.telefono_cliente,
-      email_cliente: pedido.email_cliente,
-      cantidad_productos: pedido.productos.length,
-      monto_total: pedido.monto_total,
-      costo_envio: pedido.costoEnvio,
-      medio_pago: pedido.medio_pago,
-      estado: pedido.estado,
-      estado_pago: pedido.estado_pago,
-      notas_local: pedido.notas_local,
-      productos: pedido.productos
-    });
-    
-    if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-      console.log('✅ Confirmation: Pedido insertado correctamente en la base de datos:', response.data);
+  const insertarPedidoBaseDatos = async (pedido, maxRetries = 3) => {
+    let lastError;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 [PEDIDO] Intento ${attempt}/${maxRetries} de inserción...`);
+
+        const response = await longApiClient.post('/store/NuevoPedido', {
+          cliente: pedido.cliente,
+          direccion_cliente: pedido.direccion_cliente,
+          telefono_cliente: pedido.telefono_cliente,
+          email_cliente: pedido.email_cliente,
+          cantidad_productos: pedido.productos.length,
+          monto_total: pedido.monto_total,
+          costo_envio: pedido.costoEnvio,
+          medio_pago: pedido.medio_pago,
+          estado: pedido.estado,
+          estado_pago: pedido.estado_pago,
+          notas_local: pedido.notas_local,
+          productos: pedido.productos
+        }, {
+          timeout: 30000 // 30 segundos de timeout
+        });
+
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('✅ Confirmation: Pedido insertado correctamente:', response.data);
+        }
+
+        return response; // Éxito, salir del loop
+
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ [PEDIDO] Intento ${attempt} falló:`, error.message);
+
+        // Si es el último intento, lanzar error
+        if (attempt === maxRetries) {
+          throw new Error(`No se pudo insertar el pedido después de ${maxRetries} intentos: ${error.message}`);
+        }
+
+        // Exponential backoff: esperar 2^attempt segundos (2s, 4s, 8s...)
+        const waitTime = Math.pow(2, attempt) * 1000;
+        console.log(`⏳ [PEDIDO] Esperando ${waitTime / 1000}s antes del próximo intento...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
     }
+
+    throw lastError; // Por las dudas
   };
 
   // Función para obtener el mensaje apropiado según el estado
@@ -259,7 +287,7 @@ const Confirmation = () => {
     <>
       <Head>
         <title>{statusInfo.title} - {config?.storeName || 'TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon.ico" />
+        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
         <meta name="description" content={statusInfo.message} />
       </Head>
 

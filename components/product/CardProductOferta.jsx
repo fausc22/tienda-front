@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@heroui/button';
 import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
@@ -44,8 +44,8 @@ const CardProductOferta = ({
         name,
         price: numericOfferPrice,
         imageUrl: imageUrl || codigoBarra,
-        cod_interno: cod_interno, // ✅ Asegurar valor
-        codigo_barra: imageUrl || codigoBarra, // ✅ AGREGAR
+        cod_interno: cod_interno,
+        codigo_barra: imageUrl || codigoBarra,
         quantity,
         isOffer: true,
         originalPrice: Math.round(parseFloat(originalPrice))
@@ -89,8 +89,8 @@ const CardProductOferta = ({
         </div>
       )}
 
-      {/* Contenedor de imagen */}
-      <div className="w-full h-24 sm:h-28 md:h-32 lg:h-36 mb-2 sm:mb-3 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative">
+      {/* Contenedor de imagen - ALTURA REDUCIDA para dar más espacio al nombre */}
+      <div className="w-full h-20 sm:h-24 md:h-28 lg:h-32 mb-2 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
         <img
           src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl || codigoBarra}.png`}
           alt={name}
@@ -113,13 +113,18 @@ const CardProductOferta = ({
       {/* Información del producto */}
       <div className="flex flex-col flex-grow space-y-1 sm:space-y-2">
         
-        {/* Nombre del producto */}
-        <h3 className="text-xs sm:text-sm md:text-base font-medium text-gray-800 dark:text-white line-clamp-2 leading-tight min-h-[2rem] sm:min-h-[2.5rem]">
-          {name}
-        </h3>
+        {/* Nombre del producto - CON SCROLL Y ALTURA ADAPTABLE */}
+        <div className="min-h-[2.5rem] sm:min-h-[3rem] max-h-[4.5rem] sm:max-h-[5rem] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent flex-shrink-0">
+          <h3 
+            className="text-xs sm:text-sm md:text-base font-medium text-gray-800 dark:text-white leading-snug break-words pr-1"
+            title={name} // Tooltip nativo del navegador
+          >
+            {name}
+          </h3>
+        </div>
 
         {/* Precios - Diseño especial para ofertas */}
-        <div className="flex flex-col gap-1 bg-red-50 dark:bg-red-900/20 p-2 rounded-md border border-red-100 dark:border-red-800">
+        <div className="flex flex-col gap-1 bg-red-50 dark:bg-red-900/20 p-2 rounded-md border border-red-100 dark:border-red-800 flex-shrink-0">
           {/* Precio original tachado */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-500">Antes:</span>
@@ -147,7 +152,7 @@ const CardProductOferta = ({
         </div>
 
         {/* Controles de cantidad */}
-        <div className="flex items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2">
+        <div className="flex items-center justify-center gap-1 sm:gap-2 py-1 sm:py-2 flex-shrink-0">
           <Button
             isIconOnly
             size="sm"
@@ -177,7 +182,7 @@ const CardProductOferta = ({
 
         {/* Total */}
         {quantity > 0 && (
-          <div className="text-center py-1 bg-green-50 dark:bg-green-900/20 rounded-md">
+          <div className="text-center py-1 bg-green-50 dark:bg-green-900/20 rounded-md flex-shrink-0">
             <p className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-300">
               Total: ${total.toFixed(2)}
             </p>
@@ -189,7 +194,7 @@ const CardProductOferta = ({
         )}
 
         {/* Botón agregar - Estilo especial para ofertas */}
-        <div className="mt-auto pt-1 sm:pt-2">
+        <div className="mt-auto pt-1 sm:pt-2 flex-shrink-0">
           <Button
             fullWidth
             color="danger"
@@ -204,6 +209,23 @@ const CardProductOferta = ({
           </Button>
         </div>
       </div>
+
+      {/* Estilos para scrollbar personalizado */}
+      <style jsx>{`
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 4px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 2px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: #9ca3af;
+        }
+      `}</style>
     </div>
   );
 };
