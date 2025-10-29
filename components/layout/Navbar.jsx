@@ -31,11 +31,16 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 sm:h-16">
           
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <span className="font-bold text-base sm:text-lg md:text-xl truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
+          {/* Logo & Store Name */}
+          <Link href="/" className="flex items-center gap-3 sm:gap-4 md:gap-5 flex-shrink-0">
+            <span className="font-bold text-base sm:text-lg md:text-xl truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">
               {config?.storeName || 'TIENDA'}
             </span>
+            <img
+              src="/logo.jpg"
+              alt="Logo"
+              className="h-8 sm:h-9 md:h-10 w-auto object-contain"
+            />
           </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}

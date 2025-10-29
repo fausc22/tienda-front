@@ -64,7 +64,7 @@ const Hero = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-transparent" />
 
             {/* Contenido del slide */}
-            <div className="relative h-full flex items-center px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 z-20">
+            <div className="relative h-full flex items-start pt-8 sm:pt-12 md:pt-16 lg:pt-20 px-4 sm:px-8 md:px-12 lg:px-16 xl:px-24 z-20">
               <div className="max-w-2xl text-white animate-fadeIn">
 
                 {/* Título */}
