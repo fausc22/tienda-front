@@ -16,6 +16,7 @@ import HorariosModal from '../components/horarios/HorariosModal'; // 🆕 NUEVO 
 import LiquidacionModal from '../components/liquidacion/LiquidacionModal';
 import Section from '../components/common/Section';
 import toast from 'react-hot-toast';
+import { getProductImageURL, getPlaceholderImageURL, getFaviconURL } from '../config/api';
 
 // Componente para tabla en desktop (sin cambios)
 function TablaDesktop({ 
@@ -52,11 +53,11 @@ function TablaDesktop({
                 <td className="p-4">
                   <div className="flex items-center gap-4">
                     <img
-                      src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
+                      src={getProductImageURL(item.imageUrl)}
                       alt={item.name}
                       className="w-16 h-16 object-contain bg-gray-50 rounded-lg"
                       onError={(e) => {
-                        e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+                        e.target.src = getPlaceholderImageURL();
                       }}
                     />
                     <div>
@@ -145,11 +146,11 @@ function CardsMovil({
               {/* Header de la card */}
               <div className="flex items-start gap-4 mb-4">
                 <img
-                  src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
+                  src={getProductImageURL(item.imageUrl)}
                   alt={item.name}
                   className="w-20 h-20 object-contain bg-gray-50 rounded-lg flex-shrink-0"
                   onError={(e) => {
-                    e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+                    e.target.src = getPlaceholderImageURL();
                   }}
                 />
                 <div className="flex-1 min-w-0">
@@ -337,7 +338,7 @@ const Checkout = ({ onAddToCart }) => {
 
   const handleConfirmarPagoFinal = () => {
     setShowLiquidacionModal(false);
-    window.location.href = '/tienda/pago';
+    window.location.href = '../pago';
   };
 
   const handleAddFromLiquidacion = (productData) => {
@@ -351,7 +352,9 @@ const Checkout = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `CARRITO - ${config.storeName}` : 'CARRITO - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
+        <link rel="icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="shortcut icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="apple-touch-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
         <meta name="description" content="Revisa tu carrito de compras" />
       </Head>
 
@@ -510,7 +513,8 @@ const Checkout = ({ onAddToCart }) => {
                     name={product.art_desc_vta}
                     price={product.PRECIO}
                     imageUrl={product.CODIGO_BARRA}
-                    cod_interno={product.cod_interno} 
+                    cod_interno={product.cod_interno}
+                    stock={product.STOCK}
                     onAddToCart={onAddToCart}
                     reloadOnAdd={true}
                   />

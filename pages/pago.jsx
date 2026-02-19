@@ -9,7 +9,7 @@ import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import SmartAddressInput from '../components/pago/SmartAddressInput';
 import AddressMapPicker from '../components/pago/AddressMapPicker';
-import apiClient from '../config/api';
+import apiClient, { getProductImageURL, getPlaceholderImageURL, getFaviconURL } from '../config/api';
 
 // Componente para mostrar errores de validación
 const ErrorMessage = ({ message, show }) => {
@@ -81,7 +81,7 @@ const Pago = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (items.length === 0) {
-        router.push('/tienda/checkout');
+        router.push('/checkout');
       }
     }, 100); // Pequeño delay para permitir que el contexto se hidrate
 
@@ -344,7 +344,9 @@ const Pago = () => {
     <>
       <Head>
         <title>{config?.storeName ? `PAGO - ${config.storeName}` : 'PAGO - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
+        <link rel="icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="shortcut icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="apple-touch-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
         <meta name="description" content="Finaliza tu compra" />
       </Head>
 
@@ -698,10 +700,10 @@ const Pago = () => {
                         <div className="h-12 w-12 flex-shrink-0">
                           <img
                             className="h-12 w-12 rounded-md object-contain bg-gray-50"
-                            src={`https://vps-5234411-x.dattaweb.com/api/images/products/${item.imageUrl}.png`}
+                            src={getProductImageURL(item.imageUrl)}
                             alt={item.name}
                             onError={(e) => {
-                              e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+                              e.target.src = getPlaceholderImageURL();
                             }}
                           />
                         </div>

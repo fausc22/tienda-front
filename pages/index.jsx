@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useProducts } from '../hooks/useProducts';
 import { useConfig } from '../context/ConfigContext';
 import CardProduct from '../components/product/CardProduct';
@@ -15,11 +16,17 @@ import CardProductOferta from '../components/product/CardProductOferta';
 
 const Home = ({ onAddToCart }) => {
   const { config } = useConfig();
+  const router = useRouter();
   const { ofertas, loading, error } = useOfertas();
   const { products: destacados, loading: loadingDestacados } = useProducts('/store/articulosDEST');
 
   const scrollToTop = () => {
     window.scrollTo(0, 0);
+  };
+
+  const navigateToProducts = () => {
+    scrollToTop();
+    router.push('/productos');
   };
 
   // Función para determinar si mostrar una sección
@@ -31,7 +38,9 @@ const Home = ({ onAddToCart }) => {
     <>
       <Head>
         <title>{config?.storeName ? `INICIO - ${config.storeName}` : 'INICIO - TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
+        <link rel="icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="shortcut icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="apple-touch-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
         <meta name="description" content={config?.storeDescription || 'Tienda online'} />
       </Head>
 
@@ -62,15 +71,14 @@ const Home = ({ onAddToCart }) => {
 
               {/* Botón Ver Todos */}
               <div className="w-full flex justify-center mt-6 sm:mt-8">
-                <button
-                  onClick={() => {
-                    scrollToTop();
-                    window.location.href = '/tienda/productos';
-                  }}
-                  className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
-                >
-                  Ver todos los productos
-                </button>
+                <Link href="/productos">
+                  <button
+                    onClick={scrollToTop}
+                    className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
+                  >
+                    Ver todos los productos
+                  </button>
+                </Link>
               </div>
             </Section>
           )}
@@ -103,7 +111,8 @@ const Home = ({ onAddToCart }) => {
                       name={articulo.art_desc_vta}
                       price={articulo.PRECIO}
                       imageUrl={articulo.CODIGO_BARRA}
-                      cod_interno={articulo.cod_interno}  // ← AGREGADO
+                      cod_interno={articulo.cod_interno}
+                      stock={articulo.STOCK}
                       onAddToCart={onAddToCart}
                     />
                   ))}
@@ -111,15 +120,14 @@ const Home = ({ onAddToCart }) => {
 
               {/* Botón Ver Más */}
               <div className="w-full flex justify-center mt-6 sm:mt-8">
-                <button
-                  onClick={() => {
-                    scrollToTop();
-                    window.location.href = '/tienda/productos';
-                  }}
-                  className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
-                >
-                  Ver más
-                </button>
+                <Link href="/productos">
+                  <button
+                    onClick={scrollToTop}
+                    className="bg-transparent text-blue-600 border border-blue-600 py-2 px-6 sm:py-3 sm:px-8 rounded-lg sm:rounded-xl hover:text-white hover:bg-blue-600 transition-all duration-300 text-sm sm:text-base font-medium"
+                  >
+                    Ver más
+                  </button>
+                </Link>
               </div>
             </Section>
           )}
@@ -152,15 +160,14 @@ const Home = ({ onAddToCart }) => {
                   Pronto tendremos ofertas increíbles y productos destacados para ti. 
                   ¡Mantente atento a nuestras novedades!
                 </p>
-                <button
-                  onClick={() => {
-                    scrollToTop();
-                    window.location.href = '/productos';
-                  }}
-                  className="bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 transition-all duration-300 font-medium"
-                >
-                  Ver catálogo completo
-                </button>
+                <Link href="/productos">
+                  <button
+                    onClick={scrollToTop}
+                    className="bg-blue-600 text-white py-3 px-8 rounded-lg hover:bg-blue-700 transition-all duration-300 font-medium"
+                  >
+                    Ver catálogo completo
+                  </button>
+                </Link>
               </div>
             </Section>
           )}

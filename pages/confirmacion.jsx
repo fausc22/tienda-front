@@ -8,7 +8,7 @@ import { IoMailOutline, IoCheckmarkCircle, IoMdAlert,  } from 'react-icons/io5';
 import { FaLocationDot } from 'react-icons/fa6';
 import { useConfig } from '../context/ConfigContext';
 import { useCart } from '../context/CartContext';
-import { emailApiClient, longApiClient } from '../config/api';
+import { emailApiClient, longApiClient, getFaviconURL } from '../config/api';
 
 const Confirmation = () => {
   const router = useRouter();
@@ -287,7 +287,9 @@ const Confirmation = () => {
     <>
       <Head>
         <title>{statusInfo.title} - {config?.storeName || 'TIENDA'}</title>
-        <link rel="icon" href="https://vps-5234411-x.dattaweb.com/api/images/favicon-tienda.ico" />
+        <link rel="icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="shortcut icon" type="image/x-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
+        <link rel="apple-touch-icon" href="https://mycarrito.com.ar/api/images/favicon-tienda.ico?v=1" />
         <meta name="description" content={statusInfo.message} />
       </Head>
 

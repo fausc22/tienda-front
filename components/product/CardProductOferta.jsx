@@ -4,6 +4,7 @@ import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts';
+import { getProductImageURL, getPlaceholderImageURL } from '../../config/api';
 
 const CardProductOferta = ({ 
   name, 
@@ -92,11 +93,11 @@ const CardProductOferta = ({
       {/* Contenedor de imagen - ALTURA REDUCIDA para dar más espacio al nombre */}
       <div className="w-full h-20 sm:h-24 md:h-28 lg:h-32 mb-2 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
         <img
-          src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl || codigoBarra}.png`}
+          src={getProductImageURL(imageUrl || codigoBarra)}
           alt={name}
           className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105"
           onError={(e) => {
-            e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+            e.target.src = getPlaceholderImageURL();
           }}
         />
 

@@ -1,8 +1,64 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+
+// Extraer hostname de NEXT_PUBLIC_API_URL si está disponible
+const getApiHostname = () => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    console.warn('⚠️ NEXT_PUBLIC_API_URL no está definida. Usando hostname por defecto.');
+    return null;
+  }
+  
+  try {
+    const url = new URL(apiUrl);
+    return url.hostname;
+  } catch (error) {
+    console.warn('⚠️ Error al parsear NEXT_PUBLIC_API_URL:', error);
+    return null;
+  }
+};
+
+const apiHostname = getApiHostname();
+
+// Construir remotePatterns dinámicamente
+const remotePatterns = [
+  {
+    protocol: 'https',
+    hostname: 'www.rsoftware.com.ar',
+    pathname: '/**',
+  },
+  {
+    protocol: 'https',
+    hostname: 'rsoftware.com.ar',
+    pathname: '/**',
+  },
+  {
+    protocol: 'https',
+    hostname: 'images.unsplash.com',
+    pathname: '/**',
+  },
+  {
+    protocol: 'https',
+    hostname: 'picsum.photos',
+    pathname: '/**',
+  },
+];
+
+// Agregar hostname de API si está disponible
+if (apiHostname) {
+  remotePatterns.push({
+    protocol: 'https',
+    hostname: apiHostname,
+    pathname: '/**',
+  });
+}
+
 const nextConfig = {
-  // CONFIGURACIÓN CRÍTICA PARA SUBDIRECTORIO
-  basePath: '/tienda',
-  assetPrefix: '/tienda',
+  // CONFIGURACIÓN PARA SUBDIRECTORIO SOLO EN PRODUCCIÓN
+  ...(isProd && {
+    basePath: '/puntosur',
+    assetPrefix: '/puntosur',
+  }),
 
   // CONFIGURACIÓN PARA EXPORTACIÓN ESTÁTICA
   output: 'export',
@@ -11,33 +67,7 @@ const nextConfig = {
   // ✅ CONFIGURACIÓN MEJORADA DE IMÁGENES
   images: {
     unoptimized: true, // CRÍTICO: Las imágenes optimizadas no funcionan con export
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'www.rsoftware.com.ar',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'rsoftware.com.ar',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'picsum.photos',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'vps-5234411-x.dattaweb.com',
-        pathname: '/**',
-      }
-    ],
+    remotePatterns,
     // ✅ FORMATOS ADICIONALES
     formats: ['image/avif', 'image/webp'],
   },
@@ -70,45 +100,17 @@ const nextConfig = {
       },
     });
 
-    // ✅ OPTIMIZACIÓN DE ARCHIVOS ESTÁTICOS
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          default: false,
-          vendors: false,
-          // Crear chunk separado para vendors grandes
-          vendor: {
-            name: 'vendor',
-            chunks: 'all',
-            test: /node_modules/,
-            priority: 20
-          },
-          // Chunk común para código compartido
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'async',
-            priority: 10,
-            reuseExistingChunk: true,
-            enforce: true
-          }
-        }
-      }
-    };
-
     return config;
   },
   
-  // ✅ CONFIGURACIÓN PARA MANEJO DE RUTAS EN SUBDIRECTORIO
-  async rewrites() {
-    return {
-      beforeFiles: [],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
+  // ❌ REMOVER REWRITES - No funcionan con export estático
+  // async rewrites() {
+  //   return {
+  //     beforeFiles: [],
+  //     afterFiles: [],
+  //     fallback: [],
+  //   };
+  // },
 
   // ✅ HEADERS ADICIONALES (aunque con export estático dependen del servidor web)
   async headers() {

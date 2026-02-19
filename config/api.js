@@ -1,31 +1,45 @@
 import axios from 'axios';
 
-// Configuración de base URL dinámica
+// Configuración de base URL - SIEMPRE usa NEXT_PUBLIC_API_URL
 const getBaseURL = () => {
-  // Si estamos en el browser
-  if (typeof window !== 'undefined') {
-    // Prioridad 1: Variable de entorno específica
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      return process.env.NEXT_PUBLIC_API_URL;
-    }
-    
-    // Prioridad 2: Detectar entorno por hostname para desarrollo
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      // En desarrollo local, usar localhost solo si el servidor está corriendo ahí
-      return 'https://vps-5234411-x.dattaweb.com/api';
-    }
-    
-    // Prioridad 3: Para cualquier otro caso (incluyendo build), usar servidor remoto
-    return 'https://vps-5234411-x.dattaweb.com/api';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (!apiUrl) {
+    throw new Error('NEXT_PUBLIC_API_URL no está definida en las variables de entorno. Por favor, configúrala en tu archivo .env');
   }
   
-  // Para SSR/SSG
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
+  return apiUrl;
+};
+
+// Función helper para obtener URLs de imágenes
+export const getImageURL = (imagePath) => {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (!apiUrl) {
+    throw new Error('NEXT_PUBLIC_API_URL no está definida en las variables de entorno');
   }
   
-  // Fallback para producción
-  return 'https://vps-5234411-x.dattaweb.com/api';
+  // Remover trailing slash si existe
+  const baseUrl = apiUrl.replace(/\/$/, '');
+  // Asegurar que imagePath no empiece con /
+  const path = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  return `${baseUrl}${path}`;
+};
+
+// Función helper para URLs de productos
+export const getProductImageURL = (barcode) => {
+  return getImageURL(`/images/products/${barcode}.png`);
+};
+
+// Función helper para placeholder
+export const getPlaceholderImageURL = () => {
+  return getImageURL('/images/placeholder.png');
+};
+
+// Función helper para favicon
+export const getFaviconURL = () => {
+  return getImageURL('/images/favicon-tienda.ico');
 };
 
 // Cliente principal con timeout estándar

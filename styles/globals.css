@@ -216,3 +216,52 @@ a {
 .font-general-bold-italic {
 	font-family: 'GeneralSans-BoldItalic';
 }
+
+/* Scrollbar hide utilities */
+.scrollbar-hide {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none; /* Chrome, Safari and Opera */
+}
+
+/* Scroll horizontal suave */
+.scroll-horizontal {
+	scroll-behavior: smooth;
+	-webkit-overflow-scrolling: touch;
+}
+
+/* Line clamp utility (fallback si no está disponible en Tailwind) */
+.line-clamp-2 {
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+/* Scrollbar personalizado para dropdowns */
+.overflow-y-auto::-webkit-scrollbar {
+	width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+	background: #f1f5f9;
+	border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+	background: #cbd5e1;
+	border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+	background: #94a3b8;
+}
+
+/* Touch manipulation para mejor UX en mobile */
+.touch-manipulation {
+	touch-action: manipulation;
+	-webkit-tap-highlight-color: transparent;
+}

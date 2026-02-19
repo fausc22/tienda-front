@@ -32,7 +32,18 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-14 sm:h-16">
           
           {/* Logo & Store Name */}
-          <Link href="/" className="flex items-center gap-3 sm:gap-4 md:gap-5 flex-shrink-0">
+          <Link 
+            href="/" 
+            className="flex items-center gap-3 sm:gap-4 md:gap-5 flex-shrink-0"
+            onClick={(e) => {
+              // Prevenir navegación si ya estamos en la página de inicio
+              if (router.pathname === '/') {
+                e.preventDefault();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                return;
+              }
+            }}
+          >
             <span className="font-bold text-base sm:text-lg md:text-xl truncate max-w-[100px] sm:max-w-[150px] md:max-w-none">
               {config?.storeName || 'TIENDA'}
             </span>
@@ -45,19 +56,34 @@ const Navbar = () => {
 
           {/* Desktop Navigation - Hidden on mobile */}
           <div className="hidden md:flex space-x-6 lg:space-x-8">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`hover:text-blue-200 transition-colors duration-300 text-sm lg:text-base font-medium ${
-                  isCurrentPath(router.pathname, item.href) 
-                    ? 'text-blue-200 border-b-2 border-blue-200' 
-                    : ''
-                }`}
-              >
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const isActive = isCurrentPath(router.pathname, item.href);
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`hover:text-blue-200 transition-colors duration-300 text-sm lg:text-base font-medium ${
+                    isActive
+                      ? 'text-blue-200 border-b-2 border-blue-200' 
+                      : ''
+                  }`}
+                  onClick={(e) => {
+                    // Si ya estamos en esa página, solo hacer scroll al inicio
+                    if (isActive && item.href === '/') {
+                      e.preventDefault();
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                      return;
+                    }
+                    if (isActive) {
+                      e.preventDefault();
+                      return;
+                    }
+                  }}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
             <button
               onClick={scrollToContact}
               className="hover:text-blue-200 transition-colors duration-300 text-sm lg:text-base font-medium"

@@ -4,19 +4,48 @@ import { IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
 import { formatPrice } from '../../hooks/useProducts';
+import { getProductImageURL, getPlaceholderImageURL } from '../../config/api';
 
 
-const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
+const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno, stock }) => {
   const [quantity, setQuantity] = useState(0);
-  const { dispatch } = useCart();
+  
+  // Obtener el contexto del carrito con validación segura
+  let cartContext = { items: [], dispatch: () => {} };
+  try {
+    const context = useCart();
+    if (context && (context.items || context.dispatch)) {
+      cartContext = context;
+    }
+  } catch (error) {
+    // Si el hook falla (fuera del provider o durante SSR), usar valores por defecto
+    console.warn('CartContext no disponible, usando valores por defecto:', error.message);
+  }
+  
+  const { dispatch = () => {}, items = [] } = cartContext;
 
   // Formatear los precios al recibir las props
   const formattedPrice = formatPrice(price);
   const formattedOriginalPrice = originalPrice ? formatPrice(originalPrice) : null;
   const numericPrice = Math.round(parseFloat(price));
+  
+  // Convertir stock a número y obtener stock disponible
+  const stockDisponible = parseInt(stock || '0', 10);
+  
+  // Obtener cantidad actual en el carrito para este producto
+  const itemEnCarrito = items.find(item => item.codigo_barra === imageUrl || item.cod_interno === cod_interno);
+  const cantidadEnCarrito = itemEnCarrito ? itemEnCarrito.quantity : 0;
+  const stockRealDisponible = Math.max(0, stockDisponible - cantidadEnCarrito);
 
   const handleIncrease = () => {
-    setQuantity(prev => prev + 1);
+    if (quantity < stockRealDisponible) {
+      setQuantity(prev => prev + 1);
+    } else {
+      toast.error(`Stock máximo disponible: ${stockRealDisponible}`, {
+        duration: 2000,
+        position: 'top-right',
+      });
+    }
   };
 
   const handleDecrease = () => {
@@ -25,6 +54,16 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
 
   const handleAddToCart = () => {
     if (quantity === 0) return;
+    
+    // Validar stock antes de agregar
+    if (quantity > stockRealDisponible) {
+      toast.error(`Stock insuficiente. Disponible: ${stockRealDisponible}`, {
+        duration: 2000,
+        position: 'top-right',
+      });
+      setQuantity(stockRealDisponible); // Ajustar cantidad al máximo disponible
+      return;
+    }
 
     dispatch({
       type: 'ADD_ITEM',
@@ -58,11 +97,11 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
       {/* Contenedor de imagen - Altura reducida y fija */}
       <div className="w-full h-20 sm:h-24 md:h-28 lg:h-32 mb-2 flex items-center justify-center bg-gray-50 rounded-md overflow-hidden relative flex-shrink-0">
         <img
-          src={`https://vps-5234411-x.dattaweb.com/api/images/products/${imageUrl}.png`}
+          src={getProductImageURL(imageUrl)}
           alt={name}
           className="max-w-full max-h-full object-contain transition-all duration-300 group-hover:scale-105"
           onError={(e) => {
-            e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+            e.target.src = getPlaceholderImageURL();
           }}
         />
       </div>
@@ -114,7 +153,9 @@ const CardProduct = ({ name, price, imageUrl, originalPrice, cod_interno }) => {
             size="sm"
             variant="flat"
             onClick={handleIncrease}
+            disabled={quantity >= stockRealDisponible}
             className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 min-w-0 text-xs"
+            title={quantity >= stockRealDisponible ? `Stock máximo: ${stockRealDisponible}` : ''}
           >
             <IoMdAdd className="text-xs sm:text-sm" />
           </Button>

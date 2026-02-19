@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getProductImageURL, getPlaceholderImageURL } from '../config/api';
 
 export const useProductImage = (barcode) => {
   const [imageSrc, setImageSrc] = useState(null);
@@ -6,13 +7,13 @@ export const useProductImage = (barcode) => {
 
   useEffect(() => {
     if (!barcode) {
-      setImageSrc('https://vps-5234411-x.dattaweb.com/api/images/placeholder.png');
+      setImageSrc(getPlaceholderImageURL());
       setLoading(false);
       return;
     }
 
-    const localUrl = `https://vps-5234411-x.dattaweb.com/api/images/products/${barcode}.png`;
-    const placeholder = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+    const localUrl = getProductImageURL(barcode);
+    const placeholder = getPlaceholderImageURL();
 
     const checkImage = async () => {
       try {

@@ -3,6 +3,7 @@ import { Button } from '@heroui/button';
 import { IoMdClose, IoMdAdd, IoMdRemove } from 'react-icons/io';
 import { useProducts } from '../../hooks/useProducts';
 import toast from 'react-hot-toast';
+import { getProductImageURL, getPlaceholderImageURL } from '../../config/api';
 
 const LiquidacionModal = ({ 
   isOpen, 
@@ -123,11 +124,11 @@ const LiquidacionModal = ({
                     {/* ============================================ */}
                     <div className="relative mb-2 bg-gray-50 rounded-md sm:rounded-lg overflow-hidden aspect-square">
                       <img
-                        src={`https://vps-5234411-x.dattaweb.com/api/images/products/${producto.CODIGO_BARRA}.png`}
+                        src={getProductImageURL(producto.CODIGO_BARRA)}
                         alt={producto.art_desc_vta}
                         className="w-full h-full object-contain p-1 sm:p-1.5 md:p-2 group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
-                          e.target.src = 'https://vps-5234411-x.dattaweb.com/api/images/placeholder.png';
+                          e.target.src = getPlaceholderImageURL();
                         }}
                       />
                       

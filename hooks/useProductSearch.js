@@ -17,7 +17,7 @@ export const useInstantSearch = () => {
 
   // Función para buscar sugerencias (solo primeros 5 resultados)
   const fetchSuggestions = useCallback(async (term) => {
-    if (!term || term.length < 3) {
+    if (!term || term.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -47,12 +47,19 @@ export const useInstantSearch = () => {
 
       const items = response.data?.data || [];
       setSuggestions(items);
-      setShowSuggestions(items.length > 0);
+      // Mostrar sugerencias SIEMPRE si el término tiene al menos 2 caracteres
+      // Esto permite mostrar el dropdown incluso si no hay resultados (para mostrar mensaje)
+      if (term.length >= 2) {
+        setShowSuggestions(true);
+      } else {
+        setShowSuggestions(false);
+      }
       
     } catch (error) {
       if (error.name !== 'AbortError') {
         console.error('Error fetching suggestions:', error);
         setSuggestions([]);
+        setShowSuggestions(false);
       }
     } finally {
       setLoading(false);
@@ -119,10 +126,10 @@ export const useInstantSearch = () => {
       return;
     }
 
-    if (searchTerm.length >= 3) {
+    if (searchTerm.length >= 2) {
       debounceRef.current = setTimeout(() => {
         fetchSuggestions(searchTerm);
-      }, 400); // 400ms de delay
+      }, 300); // 300ms de delay para respuesta más rápida
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
