@@ -146,7 +146,7 @@ const Confirmation = () => {
       try {
         console.log(`🔄 [PEDIDO] Intento ${attempt}/${maxRetries} de inserción...`);
 
-        const response = await longApiClient.post('/store/NuevoPedido', {
+        const body = {
           cliente: pedido.cliente,
           direccion_cliente: pedido.direccion_cliente,
           telefono_cliente: pedido.telefono_cliente,
@@ -159,9 +159,18 @@ const Confirmation = () => {
           estado_pago: pedido.estado_pago,
           notas_local: pedido.notas_local,
           productos: pedido.productos
-        }, {
-          timeout: 30000 // 30 segundos de timeout
-        });
+        };
+        if (pedido.cuponCodigo != null && pedido.cuponCodigo !== '') {
+          body.cuponCodigo = pedido.cuponCodigo;
+        }
+        if (pedido.deliveryOption != null && pedido.deliveryOption !== '') {
+          body.deliveryOption = pedido.deliveryOption;
+        }
+        const requestConfig = { timeout: 30000 };
+        if (pedido.idempotencyKey) {
+          requestConfig.headers = { 'Idempotency-Key': pedido.idempotencyKey };
+        }
+        const response = await longApiClient.post('/store/NuevoPedido', body, requestConfig);
 
         if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
           console.log('✅ Confirmation: Pedido insertado correctamente:', response.data);
@@ -273,11 +282,13 @@ const Confirmation = () => {
   const statusInfo = getStatusMessage();
   const IconComponent = statusInfo.icon;
   
-  const subtotal = pedido.productos.reduce((acc, item) => 
+  const subtotal = (pedido.subtotal != null ? parseFloat(pedido.subtotal) : pedido.productos.reduce((acc, item) =>
     acc + parseFloat(item.precio) * item.cantidad, 0
-  ).toFixed(2);
+  )).toFixed(2);
+  const descuentoRegla = parseFloat(pedido.discountRule || 0);
+  const descuentoCupon = parseFloat(pedido.discountCoupon || 0);
   const costoEnvio = parseFloat(pedido.costoEnvio || 0);
-  const totalFinal = (parseFloat(subtotal) + costoEnvio).toFixed(2);
+  const totalFinal = (pedido.monto_total != null ? parseFloat(pedido.monto_total) : (parseFloat(subtotal) - descuentoRegla - descuentoCupon + costoEnvio)).toFixed(2);
 
   const googleMapsUrl = config?.storeAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.storeAddress)}`
@@ -402,9 +413,21 @@ const Confirmation = () => {
                     <span className="font-medium text-gray-700">Subtotal:</span>
                     <span className="font-semibold text-gray-900">${subtotal}</span>
                   </div>
+                  {descuentoRegla > 0 && (
+                    <div className="flex justify-between items-center text-sm sm:text-base text-green-700">
+                      <span className="font-medium">Descuento (promo):</span>
+                      <span className="font-semibold">−${descuentoRegla.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {descuentoCupon > 0 && (
+                    <div className="flex justify-between items-center text-sm sm:text-base text-green-700">
+                      <span className="font-medium">Descuento (cupón):</span>
+                      <span className="font-semibold">−${descuentoCupon.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center text-sm sm:text-base">
-                    <span className="font-medium text-gray-700">Costo de Envío:</span>
-                    <span className="font-semibold text-gray-900">${costoEnvio.toFixed(2)}</span>
+                    <span className="font-medium text-gray-700">Envío:</span>
+                    <span className="font-semibold text-gray-900">{costoEnvio > 0 ? `$${costoEnvio.toFixed(2)}` : 'Envío gratis'}</span>
                   </div>
                   <div className="border-t border-blue-200 pt-3">
                     <div className="flex justify-between items-center text-lg sm:text-xl">
@@ -427,7 +450,7 @@ const Confirmation = () => {
 
               {/* Mensaje adicional para pagos pendientes */}
               {paymentStatus === 'pending' && (
-                <div className="bg-yellow-50 border border-yellow-200c rounded-lg p-4 mb-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
                   <div className="flex items-start gap-3">
                     
                     <div>

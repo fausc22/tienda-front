@@ -9,7 +9,8 @@ import { IoMdAdd, IoMdRemove, IoMdTrash } from 'react-icons/io';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import { useProducts, useRelatedProducts } from '../hooks/useProducts';
-import { useHorarios } from '../hooks/useHorarios'; // 🆕 NUEVO IMPORT
+import { useHorarios } from '../hooks/useHorarios';
+import apiClient from '../config/api';
 import CardProduct from '../components/product/CardProduct';
 import WhatsAppButton from '../components/cart/WhatsAppButton';
 import HorariosModal from '../components/horarios/HorariosModal'; // 🆕 NUEVO IMPORT
@@ -251,6 +252,16 @@ const Checkout = ({ onAddToCart }) => {
   const [itemToDelete, setItemToDelete] = useState(null);
   const [horariosConfirmados, setHorariosConfirmados] = useState(false);
   const [showLiquidacionModal, setShowLiquidacionModal] = useState(false);
+  const [envioGratisDesde, setEnvioGratisDesde] = useState(null);
+
+  const subtotalCheckout = items.reduce((acc, item) => acc + item.total, 0);
+
+  useEffect(() => {
+    apiClient.get('/store/promo-rules/summary').then((res) => {
+      const v = res.data?.envioGratisDesde;
+      setEnvioGratisDesde(v != null && !isNaN(v) ? Number(v) : null);
+    }).catch(() => setEnvioGratisDesde(null));
+  }, []);
 
   // 🆕 Efecto para detectar estado bloqueado (INACTIVA)
   useEffect(() => {
@@ -421,6 +432,15 @@ const Checkout = ({ onAddToCart }) => {
                       <span>Envío</span>
                       <span className="text-green-600">Se calcula en el siguiente paso</span>
                     </div>
+                    {envioGratisDesde != null && envioGratisDesde > 0 && (
+                      <div className="p-3 rounded-lg text-sm border border-green-200 bg-green-50 text-green-800">
+                        {subtotalCheckout >= envioGratisDesde ? (
+                          <span>Envío gratis – compra mínima alcanzada</span>
+                        ) : (
+                          <span>Agregá <strong>${(envioGratisDesde - subtotalCheckout).toFixed(2)}</strong> más para envío gratis</span>
+                        )}
+                      </div>
+                    )}
                     <div className="border-t pt-3">
                       <div className="flex justify-between text-lg font-bold text-gray-900">
                         <span>Total</span>

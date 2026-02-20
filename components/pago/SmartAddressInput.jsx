@@ -8,7 +8,8 @@ const SmartAddressInput = ({
   initialValue = '', 
   className = '', 
   externalValue = '', // Nueva prop para valor externo
-  onInputChange = null // Nueva prop para manejar cambios externos
+  onInputChange = null, // Nueva prop para manejar cambios externos
+  clearTrigger = 0 // Cuando cambia, limpia selección e input (desde padre, ej. botón Limpiar)
 }) => {
   const [address, setAddress] = useState(initialValue);
   const [suggestions, setSuggestions] = useState([]);
@@ -19,6 +20,18 @@ const SmartAddressInput = ({
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
   const suggestionsRef = useRef(null);
+
+  // Limpiar cuando el padre dispara clearTrigger (ej. botón Limpiar)
+  useEffect(() => {
+    if (clearTrigger > 0) {
+      setSelectedAddress(null);
+      setAddress('');
+      setSuggestions([]);
+      setShowSuggestions(false);
+      if (onInputChange) onInputChange('');
+      if (onAddressSelect) onAddressSelect(null);
+    }
+  }, [clearTrigger]);
 
   // Actualizar el input cuando llegue un valor externo (desde el mapa)
   useEffect(() => {
@@ -63,7 +76,8 @@ const SmartAddressInput = ({
           shippingCost: result.shippingCost,
           confidence: result.confidence,
           components: result.components,
-          coordinates: result.coordinates
+          coordinates: result.coordinates,
+          outOfRange: result.outOfRange
         }));
 
         setSuggestions(processedSuggestions);
@@ -112,20 +126,21 @@ const SmartAddressInput = ({
     }
   };
 
-  // Seleccionar una dirección
+  // Seleccionar una dirección (el padre puede rechazar si outOfRange)
   const handleSelectAddress = (suggestion) => {
     setAddress(suggestion.formatted);
     setSelectedAddress(suggestion);
     setShowSuggestions(false);
     
-    // Notificar al componente padre
+    // Notificar al componente padre (incluye outOfRange para validación)
     onAddressSelect({
       address: suggestion.formatted,
       distance: suggestion.distance,
       shippingCost: suggestion.shippingCost,
       coordinates: suggestion.coordinates,
       components: suggestion.components,
-      source: 'input'
+      source: 'input',
+      outOfRange: suggestion.outOfRange
     });
   };
 
@@ -184,20 +199,24 @@ const SmartAddressInput = ({
             <div
               key={suggestion.id}
               onClick={() => handleSelectAddress(suggestion)}
-              className="p-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors duration-150"
+              className={`p-3 border-b border-gray-100 last:border-b-0 transition-colors duration-150 ${
+                suggestion.outOfRange ? 'bg-amber-50 hover:bg-amber-100 cursor-pointer' : 'hover:bg-blue-50 cursor-pointer'
+              }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <IoMdPin className="text-blue-600 flex-shrink-0 text-sm" />
+                    <IoMdPin className={suggestion.outOfRange ? 'text-amber-600 flex-shrink-0 text-sm' : 'text-blue-600 flex-shrink-0 text-sm'} />
                     <span className="font-medium text-gray-900 text-sm">
                       {suggestion.formatted}
                     </span>
                   </div>
-                  
-                  {/* Información de envío */}
-                  <div className="text-xs text-gray-600 ml-5">
-                    <span>Distancia: {suggestion.distance}km • Envío: ${suggestion.shippingCost.toFixed(2)}</span>
+                  <div className="text-xs ml-5">
+                    {suggestion.outOfRange ? (
+                      <span className="text-amber-700">Fuera de zona de entrega</span>
+                    ) : (
+                      <span className="text-gray-600">Distancia: {suggestion.distance}km • Envío: ${suggestion.shippingCost.toFixed(2)}</span>
+                    )}
                   </div>
                 </div>
               </div>

@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { Button } from '@heroui/button';
 import { CiCircleCheck, CiLocationOn, CiCreditCard1, CiUser, CiPhone, CiMail } from 'react-icons/ci';
-import { IoMdClose, IoMdCheckmarkCircle, IoMdAlert, IoMdTrash, IoMdPin } from 'react-icons/io';
+import { IoMdClose, IoMdCheckmarkCircle, IoMdAlert, IoMdTrash, IoMdPin, IoMdPricetag } from 'react-icons/io';
+import toast from 'react-hot-toast';
 import { useCart } from '../context/CartContext';
 import { useConfig } from '../context/ConfigContext';
 import SmartAddressInput from '../components/pago/SmartAddressInput';
@@ -62,19 +63,28 @@ const Pago = () => {
     localNote: ''
   });
 
-  // Estados para manejo de envío
+  // Estados para manejo de envío (shippingCost se mantiene por compatibilidad con SmartAddressInput; el total viene del quote)
   const [shippingCost, setShippingCost] = useState(0);
   const [selectedAddressData, setSelectedAddressData] = useState(null);
   const [addressInputValue, setAddressInputValue] = useState('');
+  // Fase 5: Quote como fuente de verdad
+  const [quote, setQuote] = useState(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState(null);
+  const [cuponCodigo, setCuponCodigo] = useState('');
+  const [cuponInput, setCuponInput] = useState('');
   // Estados de UI
   const [errors, setErrors] = useState({});
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [modalMessage, setModalMessage] = useState('');
   const [showMapPicker, setShowMapPicker] = useState(false);
-  const [addressSource, setAddressSource] = useState(null); // 'input' o 'map'
-  const subtotal = items.reduce((acc, item) => acc + item.total, 0);
-  const finalShippingCost = formData.deliveryOption === 'local' ? 0 : shippingCost;
-  const total = parseFloat(subtotal.toFixed(2)) + parseFloat(finalShippingCost.toFixed(2));
+  const [addressSource, setAddressSource] = useState(null);
+  const [clearAddressTrigger, setClearAddressTrigger] = useState(0);
+  const subtotalCart = items.reduce((acc, item) => acc + item.total, 0);
+  const maxKm = parseFloat(config?.storeDeliveryMaxKm) || 0;
+  const isAddressOutOfRange = selectedAddressData && maxKm > 0 && selectedAddressData.distance > maxKm;
+  const showOutOfRangeMessage = (formData.deliveryOption === 'delivery' && errors.address && String(errors.address).includes('fuera de la zona')) || isAddressOutOfRange;
+  const total = quote ? quote.total : (parseFloat(subtotalCart.toFixed(2)) + (formData.deliveryOption === 'local' ? 0 : shippingCost));
 
   // Redireccionar si no hay productos
   // Redireccionar si no hay productos (con delay para permitir hidratación)
@@ -83,10 +93,65 @@ const Pago = () => {
       if (items.length === 0) {
         router.push('/checkout');
       }
-    }, 100); // Pequeño delay para permitir que el contexto se hidrate
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [items, router]);
+
+  // Fase 5: Obtener quote del backend (fuente de verdad para total)
+  const fetchQuote = async () => {
+    if (items.length === 0) {
+      setQuote(null);
+      return;
+    }
+    const deliveryOption = formData.deliveryOption || 'delivery';
+    const address = deliveryOption === 'local' ? '' : (formData.address?.trim() || selectedAddressData?.address || '');
+    if (deliveryOption === 'delivery' && (!address || address.length < 5)) {
+      setQuote(null);
+      setQuoteError(null);
+      return;
+    }
+    setQuoteLoading(true);
+    setQuoteError(null);
+    try {
+      const productos = items.map((item) => ({
+        codigo_barra: item.codigo_barra || item.imageUrl,
+        cod_interno: item.cod_interno || 0,
+        cantidad: item.quantity,
+        nombre_producto: item.name,
+      }));
+      const { data } = await apiClient.post('/store/pricing/quote', {
+        productos,
+        deliveryOption,
+        address,
+        cuponCodigo: cuponCodigo || undefined,
+      });
+      setQuote(data);
+    } catch (err) {
+      const msg = err.response?.data?.error || err.message || 'Error al calcular el total';
+      const isOutOfRange = String(msg).includes('fuera de la zona');
+      if (isOutOfRange) {
+        setErrors(prev => ({ ...prev, address: msg }));
+        setQuoteError(null);
+      } else {
+        setQuoteError(msg);
+      }
+      setQuote(null);
+      if (cuponCodigo && !isOutOfRange) toast.error(msg);
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuote();
+  }, [
+    items.length,
+    items.map((i) => `${i.id}:${i.quantity}`).join('|'),
+    formData.deliveryOption,
+    (formData.deliveryOption === 'delivery' ? (formData.address || selectedAddressData?.address || '') : ''),
+    cuponCodigo,
+  ]);
 
   // Validaciones en tiempo real
   const validateField = (name, value) => {
@@ -193,18 +258,24 @@ const Pago = () => {
   // Manejar selección de dirección desde SmartAddressInput
   const handleAddressSelect = (addressData) => {
     if (addressData) {
+      const outOfRange = addressData.outOfRange === true || (maxKm > 0 && (addressData.distance ?? 0) > maxKm);
+      if (outOfRange) {
+        setErrors(prev => ({
+          ...prev,
+          address: `La dirección está fuera de la zona de entrega (máximo ${maxKm} km). Seleccioná otra.`
+        }));
+        setSelectedAddressData(null);
+        setFormData(prev => ({ ...prev, address: addressData.address }));
+        setShippingCost(0);
+        return;
+      }
       setSelectedAddressData(addressData);
       setFormData(prev => ({ ...prev, address: addressData.address }));
       setShippingCost(addressData.shippingCost || 0);
-      
-      // Limpiar errores de validación
       const newErrors = { ...errors };
       delete newErrors.address;
       setErrors(newErrors);
-      
-      console.log('Dirección seleccionada:', addressData);
     } else {
-      // Limpiar selección
       setSelectedAddressData(null);
       setFormData(prev => ({ ...prev, address: '' }));
       setShippingCost(0);
@@ -224,19 +295,25 @@ const Pago = () => {
     }
   };
 
-    const handleMapAddressConfirm = (addressData) => {
+  const handleMapAddressConfirm = (addressData) => {
+    const outOfRange = maxKm > 0 && (addressData.distance ?? 0) > maxKm;
+    if (outOfRange) {
+      setErrors(prev => ({
+        ...prev,
+        address: `La dirección está fuera de la zona de entrega (máximo ${maxKm} km). Seleccioná otra.`
+      }));
+      setSelectedAddressData(null);
+      setShowMapPicker(false);
+      return;
+    }
     setSelectedAddressData(addressData);
     setFormData(prev => ({ ...prev, address: addressData.address }));
     setShippingCost(addressData.shippingCost || 0);
-    setAddressInputValue(addressData.address); // Escribir en el input
+    setAddressInputValue(addressData.address);
     setShowMapPicker(false);
-    
-    // Limpiar errores de validación
     const newErrors = { ...errors };
     delete newErrors.address;
     setErrors(newErrors);
-    
-    console.log('Dirección desde mapa:', addressData);
   };
 
   const handlePaymentMethodChange = (value) => {
@@ -266,8 +343,10 @@ const Pago = () => {
 
     // Validar direcciones para delivery
     if (formData.deliveryOption === 'delivery') {
-      if (!selectedAddressData) {
-        newErrors.address = 'Selecciona una dirección válida';
+      if (!selectedAddressData || isAddressOutOfRange) {
+        newErrors.address = newErrors.address || (isAddressOutOfRange
+          ? `La dirección está fuera de la zona de entrega (máximo ${maxKm} km). Seleccioná otra.`
+          : 'Selecciona una dirección válida');
       }
       if (formData.isDepartment && !formData.departmentNumber.trim()) {
         newErrors.departmentNumber = 'El número de departamento es obligatorio';
@@ -290,36 +369,44 @@ const Pago = () => {
   };
 
   const processOrder = async () => {
+    if (!quote) {
+      setErrors(prev => ({ ...prev, general: 'Esperá a que se calcule el total antes de confirmar.' }));
+      return;
+    }
     try {
-      const finalShippingCost = formData.deliveryOption === 'local' ? 0 : shippingCost;
-      
+      const productosParaBackend = (quote.items || items).map((item) => ({
+        codigo_barra: item.codigo_barra || item.imageUrl,
+        cod_interno: item.cod_interno || 0,
+        nombre_producto: item.nombre_producto || item.name,
+        cantidad: item.cantidad || item.quantity,
+        precio: typeof item.precio === 'number' ? item.precio.toFixed(2) : (item.precio || item.price?.toFixed(2) || '0.00'),
+      }));
+      const idempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : null;
       const pedido = {
+        ...(idempotencyKey && { idempotencyKey }),
         cliente: formData.name,
-        direccion_cliente: formData.deliveryOption === 'delivery' 
-          ? `${selectedAddressData?.address}${formData.departmentNumber ? `, Depto: ${formData.departmentNumber}` : ''}` 
+        direccion_cliente: formData.deliveryOption === 'delivery'
+          ? `${selectedAddressData?.address || formData.address}${formData.departmentNumber ? `, Depto: ${formData.departmentNumber}` : ''}`
           : 'Retiro en local',
         telefono_cliente: formData.phone,
         email_cliente: formData.email,
-        cantidad_productos: items.reduce((acc, item) => acc + item.quantity, 0),
-        subtotal: subtotal.toFixed(2),
-        costoEnvio: finalShippingCost.toFixed(2),
-        monto_total: total,
+        cantidad_productos: productosParaBackend.reduce((acc, p) => acc + (p.cantidad || 0), 0),
+        subtotal: quote.subtotal.toFixed(2),
+        costoEnvio: quote.shipping.toFixed(2),
+        monto_total: quote.total,
+        discountRule: quote.discountRule ?? 0,
+        discountCoupon: quote.discountCoupon ?? 0,
         medio_pago: formData.paymentMethod,
         estado: 'Pendiente',
         notas_local: formData.localNote.trim() || '-',
-        // Agregar datos adicionales de dirección si están disponibles
+        deliveryOption: formData.deliveryOption,
+        cuponCodigo: quote.couponId ? (cuponCodigo || '') : undefined,
         ...(selectedAddressData && {
           direccion_coords: selectedAddressData.coordinates,
           direccion_distancia: selectedAddressData.distance,
           direccion_componentes: selectedAddressData.components
         }),
-        productos: items.map(item => ({
-        codigo_barra: item.imageUrl || item.codigo_barra,
-        cod_interno: item.cod_interno || 0, // ✅ Usar siempre snake_case como en la BD
-        nombre_producto: item.name,
-        cantidad: item.quantity,
-        precio: item.price.toFixed(2) 
-      }))
+        productos: productosParaBackend,
       };
 
       localStorage.setItem('pedido', JSON.stringify(pedido));
@@ -327,7 +414,7 @@ const Pago = () => {
       if (formData.paymentMethod === 'Efectivo') {
         router.push('/confirmacion');
       } else if (formData.paymentMethod === 'MercadoPago') {
-        const response = await apiClient.post('/store/create_preference', { total });
+        const response = await apiClient.post('/store/create_preference', { total: quote.total });
         window.location.href = `https://www.mercadopago.com.ar/checkout/v1/redirect?preference-id=${response.data.id}`;
       }
     } catch (error) {
@@ -538,16 +625,39 @@ const Pago = () => {
         onAddressSelect={handleAddressSelect}
         externalValue={addressInputValue}
         onInputChange={handleAddressInputChange}
+        clearTrigger={clearAddressTrigger}
         className="w-full"
       />
 
-      <ErrorMessage message={errors.address} show={!!errors.address} />
+      <ErrorMessage message={errors.address} show={!!errors.address && !String(errors.address).includes('fuera de la zona')} />
 
-      {/* Información adicional solo cuando viene de geocodificación */}
-      {selectedAddressData && selectedAddressData.distance && (
+      {/* Fuera de zona */}
+      {showOutOfRangeMessage && maxKm > 0 && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 min-w-0">
+              <IoMdAlert className="text-amber-600 text-lg flex-shrink-0" />
+              <p className="text-sm font-medium text-amber-800">
+                La dirección está fuera de la zona de entrega (máximo {maxKm} km). Seleccioná otra.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { handleAddressSelect(null); setClearAddressTrigger(t => t + 1); setErrors(prev => ({ ...prev, address: undefined })); }}
+              className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0 whitespace-nowrap"
+              aria-label="Limpiar dirección"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Información adicional solo cuando viene de geocodificación y está dentro de rango */}
+      {selectedAddressData && selectedAddressData.distance != null && !isAddressOutOfRange && (
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-3 min-w-0">
               <IoMdCheckmarkCircle className="text-blue-600 text-lg flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-blue-800">
@@ -555,6 +665,14 @@ const Pago = () => {
                 </p>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={() => { handleAddressSelect(null); setClearAddressTrigger(t => t + 1); }}
+              className="text-sm text-gray-500 hover:text-gray-700 flex-shrink-0 whitespace-nowrap"
+              aria-label="Limpiar dirección"
+            >
+              Limpiar
+            </button>
           </div>
         </div>
       )}
@@ -723,31 +841,106 @@ const Pago = () => {
                   </div>
                 </div>
 
+                {/* Cupón */}
+                <div className="p-4 sm:p-6 border-b border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <IoMdPricetag className="text-lg" />
+                    ¿Tenés un cupón?
+                  </h4>
+                  {quote?.couponId ? (
+                    <div className="flex items-center justify-between gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <span className="text-sm font-medium text-green-800">
+                        Cupón aplicado: −${(quote.discountCoupon || 0).toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setCuponCodigo(''); setCuponInput(''); setQuoteError(null); }}
+                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Quitar cupón
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={cuponInput}
+                          onChange={(e) => setCuponInput(e.target.value)}
+                          placeholder="Código del cupón"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        />
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          onClick={() => {
+                            const cod = cuponInput.trim();
+                            if (!cod) {
+                              toast.error('Ingresá un código');
+                              return;
+                            }
+                            setCuponCodigo(cod);
+                            setQuoteError(null);
+                          }}
+                          disabled={quoteLoading}
+                        >
+                          Aplicar
+                        </Button>
+                      </div>
+                      {quoteLoading && (
+                        <div className="flex items-center gap-2 py-1.5 px-3 rounded-lg bg-blue-50 border border-blue-100 text-blue-800 text-sm">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent" />
+                          <span>Verificando cupón...</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {quoteError && !quote?.couponId && (
+                    <p className="mt-1 text-sm text-red-600">{quoteError}</p>
+                  )}
+                </div>
+
                 <div className="p-4 sm:p-6 space-y-3">
                   <div className="flex justify-between text-gray-600">
                     <span>Subtotal ({items.length} productos)</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>${quote ? quote.subtotal.toFixed(2) : subtotalCart.toFixed(2)}</span>
                   </div>
+                  {quote && quote.discountRule > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Descuento (promo)</span>
+                      <span>−${quote.discountRule.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {quote && quote.discountCoupon > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Descuento (cupón)</span>
+                      <span>−${quote.discountCoupon.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-gray-600">
                     <span>Envío</span>
                     <span className={
-                      formData.deliveryOption === 'local' 
+                      formData.deliveryOption === 'local'
                         ? 'text-green-600 font-medium'
-                        : shippingCost > 0 
-                        ? 'text-gray-900 font-medium' 
-                        : 'text-gray-500'
+                        : quote?.envioGratis
+                        ? 'text-green-600 font-medium'
+                        : (quote ? 'text-gray-900 font-medium' : 'text-gray-500')
                     }>
-                      {formData.deliveryOption === 'local' 
-                        ? '$0.00' 
-                        : shippingCost > 0 
-                        ? `${shippingCost.toFixed(2)}` 
+                      {formData.deliveryOption === 'local'
+                        ? '$0.00'
+                        : quote
+                        ? (quote.envioGratis ? 'Envío gratis' : `$${quote.shipping.toFixed(2)}`)
+                        : quoteLoading
+                        ? 'Calculando...'
                         : 'Selecciona dirección'}
                     </span>
                   </div>
                   <div className="border-t pt-3">
                     <div className="flex justify-between text-lg font-bold text-gray-900">
                       <span>Total</span>
-                      <span className="text-blue-600">${total.toFixed(2)}</span>
+                      <span className="text-blue-600">
+                        {quoteLoading && !quote ? '...' : `$${Number(total).toFixed(2)}`}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -755,7 +948,7 @@ const Pago = () => {
                 <div className="p-4 sm:p-6 pt-0 space-y-6">
                   <Button
                     onClick={handleConfirmOrder}
-                    disabled={Object.keys(errors).length > 0 || !formData.paymentMethod}
+                    disabled={Object.keys(errors).length > 0 || !formData.paymentMethod || !quote || quoteLoading || isAddressOutOfRange || (!!errors.address && String(errors.address).includes('fuera de la zona'))}
                     color="primary"
                     size="lg"
                     fullWidth

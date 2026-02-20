@@ -38,6 +38,7 @@ export const ConfigProvider = ({ children }) => {
           storeEmail: 'puntosur@gmail.com',
           storeDeliveryBase: '200',
           storeDeliveryKm: '300',
+          storeDeliveryMaxKm: '0',
           iva: '4',
           pageStatus: '0'
         };
